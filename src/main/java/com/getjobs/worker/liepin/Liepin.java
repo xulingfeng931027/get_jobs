@@ -1,5 +1,6 @@
 package com.getjobs.worker.liepin;
 
+import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.PlaywrightUtil;
 import com.getjobs.application.service.LiepinService;
 import com.getjobs.application.entity.LiepinEntity;
@@ -555,16 +556,18 @@ public class Liepin {
                         
                         resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
                         sb.setLength(0);
+                        Bot.recordDelivery("猎聘", companyName, jobName);
                         // 点击成功后标记为已投递
                         if (jobIdForUpdate != null) {
                             liepinService.markDelivered(jobIdForUpdate);
                         }
-                        
+
                     } catch (Exception e) {
                         log.warn("关闭聊天窗口失败，但投递可能已成功: {}", e.getMessage());
                         // 即使关闭失败，也认为投递成功
                         resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
                         sb.setLength(0);
+                        Bot.recordDelivery("猎聘", companyName, jobName);
                         if (jobIdForUpdate != null) {
                             liepinService.markDelivered(jobIdForUpdate);
                         }

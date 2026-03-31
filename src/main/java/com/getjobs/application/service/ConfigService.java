@@ -120,9 +120,9 @@ public class ConfigService {
     }
 
     /**
-     * 批量更新配置
+     * 批量更新配置（若配置不存在则自动创建）
      * @param configMap 配置Map，key为config_key，value为config_value
-     * @return 更新的配置数量
+     * @return 更新或创建的配置数量
      */
     @Transactional
     public int batchUpdateConfigs(Map<String, String> configMap) {
@@ -135,13 +135,25 @@ public class ConfigService {
             ConfigEntity config = getConfigByKey(key);
 
             if (config != null) {
+                // 更新现有配置
                 config.setConfigValue(value);
                 config.setUpdatedAt(LocalDateTime.now());
                 configMapper.updateById(config);
                 updateCount++;
                 log.info("更新配置: {} = {}", key, value);
             } else {
-                log.warn("配置键不存在: {}", key);
+                // 配置不存在，自动创建新配置
+                ConfigEntity newConfig = new ConfigEntity();
+                newConfig.setConfigKey(key);
+                newConfig.setConfigValue(value);
+                newConfig.setConfigType("string");
+                newConfig.setCategory("general");
+                newConfig.setDescription("Auto-created config");
+                newConfig.setCreatedAt(LocalDateTime.now());
+                newConfig.setUpdatedAt(LocalDateTime.now());
+                configMapper.insert(newConfig);
+                updateCount++;
+                log.info("创建新配置: {} = {}", key, value);
             }
         }
 

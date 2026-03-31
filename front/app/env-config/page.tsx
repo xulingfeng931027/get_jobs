@@ -15,6 +15,8 @@ export default function EnvConfig() {
     apiKey: '',
     model: '',
     botIsSend: 0,
+    dingtalkHookUrl: '',
+    dingtalkIsSend: 0,
   })
 
   const [showApiKey, setShowApiKey] = useState(false)
@@ -51,6 +53,12 @@ export default function EnvConfig() {
             const val = String(raw ?? '').trim().toLowerCase()
             return val === '1' || val === 'true' ? 1 : 0
           })(),
+          dingtalkHookUrl: result.data.DINGTALK_HOOK_URL || '',
+          dingtalkIsSend: (() => {
+            const raw = result.data.DINGTALK_IS_SEND
+            const val = String(raw ?? '').trim().toLowerCase()
+            return val === '1' || val === 'true' ? 1 : 0
+          })(),
         })
       }
     } catch (error) {
@@ -75,6 +83,8 @@ export default function EnvConfig() {
         API_KEY: envConfig.apiKey,
         MODEL: envConfig.model,
         BOT_IS_SEND: String(envConfig.botIsSend ?? 0),
+        DINGTALK_HOOK_URL: envConfig.dingtalkHookUrl,
+        DINGTALK_IS_SEND: String(envConfig.dingtalkIsSend ?? 0),
       }
 
       const response = await fetch('http://localhost:8888/api/config', {
@@ -171,6 +181,46 @@ export default function EnvConfig() {
               />
               <p className="text-xs text-muted-foreground">
                 企业微信群机器人webhook地址，用于接收通知消息
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 钉钉 Webhook */}
+        <Card className="animate-in fade-in slide-in-from-bottom-5 duration-700">
+          <CardHeader className="flex items-start gap-4">
+            <div className="min-w-0 space-y-2">
+              <CardTitle className="flex items-center gap-2">
+                <BiLinkExternal className="text-primary" />
+                钉钉 Webhook
+              </CardTitle>
+              <CardDescription>配置钉钉群机器人，用于接收通知消息</CardDescription>
+            </div>
+            <div>
+              <button
+                type="button"
+                aria-label="钉钉发送开关"
+                onClick={() => setEnvConfig({ ...envConfig, dingtalkIsSend: envConfig.dingtalkIsSend ? 0 : 1 })}
+                className={`relative inline-flex h-7 w-14 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/40 border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,.25)] ${envConfig.dingtalkIsSend ? 'bg-emerald-500/80 hover:bg-emerald-500' : 'bg-white/10 hover:bg-white/15'}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${envConfig.dingtalkIsSend ? 'translate-x-7' : 'translate-x-0'}`}
+                />
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="dingtalkHookUrl">Webhook URL</Label>
+              <Input
+                id="dingtalkHookUrl"
+                type="text"
+                value={envConfig.dingtalkHookUrl}
+                onChange={(e) => setEnvConfig({ ...envConfig, dingtalkHookUrl: e.target.value })}
+                placeholder="https://oapi.dingtalk.com/robot/send?access_token=your_token"
+              />
+              <p className="text-xs text-muted-foreground">
+                钉钉群机器人webhook地址，用于接收通知消息
               </p>
             </div>
           </CardContent>

@@ -1,6 +1,7 @@
 package com.getjobs.worker.job51;
 
 import com.getjobs.application.service.Job51Service;
+import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.JobUtils;
 import com.getjobs.worker.utils.PlaywrightUtil;
 import com.microsoft.playwright.Locator;
@@ -50,6 +51,8 @@ public class Job51 {
     private int currentPageNum = 0;
     // 当前页从JSON拦截到的jobId列表
     private final java.util.List<Long> currentPageJobIds = new java.util.ArrayList<>();
+    // 当前页选中的职位信息列表（用于投递成功后记录）
+    private final java.util.List<String[]> currentPageJobInfos = new java.util.ArrayList<>();
 
     private static final int DEFAULT_MAX_PAGE = 50;
     private static final String BASE_URL = "https://we.51job.com/pc/search?";
@@ -262,6 +265,11 @@ public class Job51 {
         try {
             PlaywrightUtil.sleep(1);
 
+            // 清空当前页的职位信息缓存
+            synchronized (currentPageJobInfos) {
+                currentPageJobInfos.clear();
+            }
+
             // 查找所有职位的checkbox
             Locator checkboxes = page.locator("div.ick");
             if (checkboxes.count() == 0) { return; }
@@ -287,6 +295,8 @@ public class Job51 {
                     String company = i < companies.count() ? companies.nth(i).textContent() : "未知公司";
                     String jobInfo = company + " | " + title;
                     resultList.add(jobInfo);
+                    // 存储职位信息用于投递成功后记录
+                    currentPageJobInfos.add(new String[]{company, title});
 //                    log.info("选中: {}", jobInfo);
                 } catch (Exception e) { /* 静默 */ }
             }
@@ -408,6 +418,14 @@ public class Job51 {
                                 log.info("[51job] 标记已投递 {} 个职位", toMark.size());
                             } else {
                                 log.warn("[51job] 当前页没有缓存的jobId，无法标记投递状态");
+                            }
+                            // 记录投递成功的职位到 Bot
+                            synchronized (currentPageJobInfos) {
+                                int recordCount = Math.min(successNum, currentPageJobInfos.size());
+                                for (int i = 0; i < recordCount; i++) {
+                                    String[] jobInfo = currentPageJobInfos.get(i);
+                                    Bot.recordDelivery("51job", jobInfo[0], jobInfo[1]);
+                                }
                             }
                         } catch (Exception e) {
                             log.warn("[51job] 标记投递状态失败: {}", e.getMessage());

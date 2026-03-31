@@ -2,6 +2,7 @@ package com.getjobs.worker.zhilian;
 
 import com.getjobs.application.entity.ZhilianJobDataEntity;
 import com.getjobs.application.service.ZhilianService;
+import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.Job;
 import com.getjobs.worker.utils.JobUtils;
 import com.getjobs.worker.utils.PlaywrightUtil;
@@ -467,6 +468,7 @@ public class ZhiLian {
                     log.info("投递【{}】公司【{}】岗位，薪资【{}】，要求【{}·{}】，规模【{}】",
                         companyName, jobName, salary, years, education, companyTag);
                     resultList.add(job);
+                    Bot.recordDelivery("智联招聘", companyName, jobName);
                 } catch (Exception e) {
                     log.debug("记录相似职位信息失败: {}", e.getMessage());
                 }

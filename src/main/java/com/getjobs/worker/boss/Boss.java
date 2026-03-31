@@ -3,6 +3,7 @@ package com.getjobs.worker.boss;
 import com.getjobs.application.entity.AiEntity;
 import com.getjobs.application.service.AiService;
 import com.getjobs.application.service.BossService;
+import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.Job;
 import com.getjobs.worker.utils.JobUtils;
 import com.getjobs.worker.utils.PlaywrightUtil;
@@ -759,6 +760,7 @@ public class Boss {
                 log.debug("未能找到 encryptId/encryptUserId 用于更新投递状态，detailUrl: {}", detailUrl);
             }
             resultList.add(job);
+            Bot.recordDelivery("Boss直聘", job.getCompanyName(), job.getJobName());
         } else {
             // 若发生发送失败，也进行状态更新
             String encryptId = extractEncryptId(detailUrl);
