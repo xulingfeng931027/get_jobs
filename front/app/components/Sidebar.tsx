@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { BiEnvelope, BiBriefcase, BiSearch, BiTask, BiUserCircle, BiBrain, BiMoon, BiSun } from 'react-icons/bi'
-import { motion } from 'framer-motion'
-import { useTheme } from 'next-themes'
+import {usePathname} from 'next/navigation'
+import {useEffect, useState} from 'react'
+import {BiBrain, BiBriefcase, BiCog, BiEnvelope, BiMoon, BiSearch, BiSun, BiTask, BiUserCircle} from 'react-icons/bi'
+import {motion} from 'framer-motion'
+import {useTheme} from 'next-themes'
+import {API_PATHS} from '@/lib/api-config'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -26,16 +27,14 @@ export default function Sidebar() {
     const check = async () => {
       if (checking) return
       setChecking(true)
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:8888'
-
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 3000)
       try {
         // 先尝试自定义健康接口
-        let res = await fetch(`${baseUrl}/api/health`, { signal: controller.signal })
+        let res = await fetch(API_PATHS.health, { signal: controller.signal })
         if (res.status === 404) {
           // 回退到 Spring Boot Actuator
-          res = await fetch(`${baseUrl}/actuator/health`, { signal: controller.signal })
+          res = await fetch(API_PATHS.actuatorHealth, { signal: controller.signal })
         }
         if (!res.ok) throw new Error(`status ${res.status}`)
         const data = await res.json()
@@ -66,6 +65,7 @@ export default function Sidebar() {
   const envGroup = [
     { href: '/env-config', icon: BiEnvelope, label: '环境配置', color: 'text-cyan-300' },
     { href: '/ai-config', icon: BiBrain, label: 'AI配置', color: 'text-purple-300' },
+    { href: '/common-config', icon: BiCog, label: '公共配置', color: 'text-amber-300' },
   ]
 
   const platformGroup = [

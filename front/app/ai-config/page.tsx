@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BiSave, BiBrain, BiInfoCircle } from 'react-icons/bi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import {useEffect, useState} from 'react'
+import {BiBrain, BiInfoCircle, BiSave} from 'react-icons/bi'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Label} from '@/components/ui/label'
+import {Textarea} from '@/components/ui/textarea'
 import PageHeader from '@/app/components/PageHeader'
+import {API_PATHS} from '@/lib/api-config'
 
 export default function AiConfigPage() {
   const [aiConfig, setAiConfig] = useState({
@@ -26,7 +27,7 @@ export default function AiConfigPage() {
 
   const fetchAiConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/ai/config', {
+      const response = await fetch(API_PATHS.aiConfig, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -54,7 +55,7 @@ export default function AiConfigPage() {
   // 加载 boss_config 的 enable_ai 字段
   const fetchEnableAi = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/boss/config', {
+      const response = await fetch(API_PATHS.boss.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ export default function AiConfigPage() {
     try {
       const next = enableAi ? 0 : 1
       setEnableAi(next)
-      const response = await fetch('http://localhost:8888/api/boss/config', {
+      const response = await fetch(API_PATHS.boss.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ export default function AiConfigPage() {
     setLoading(true)
     try {
       // 保存AI配置
-      const response = await fetch('http://localhost:8888/api/ai/config', {
+      const response = await fetch(API_PATHS.aiConfig, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

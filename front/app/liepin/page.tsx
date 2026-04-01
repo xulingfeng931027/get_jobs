@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createSSEWithBackoff } from '@/lib/sse'
-import { BiSearch, BiSave, BiTargetLock, BiMap, BiMoney, BiTime, BiBookmark, BiBarChart, BiPlay, BiStop, BiLogOut, BiBriefcase } from 'react-icons/bi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {useEffect, useState} from 'react'
+import {createSSEWithBackoff} from '@/lib/sse'
+import {BiBriefcase, BiLogOut, BiMoney, BiPlay, BiSave, BiSearch, BiStop} from 'react-icons/bi'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import {Select} from '@/components/ui/select'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import AnalysisContent from '@/app/liepin/analysis/AnalysisContent'
 import PageHeader from '@/app/components/PageHeader'
+import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import {API_PATHS} from '@/lib/api-config'
 
 interface LiepinConfig {
   id?: number
@@ -60,7 +62,7 @@ export default function LiepinPage() {
       return
     }
 
-    const client = createSSEWithBackoff('http://localhost:8888/api/jobs/login-status/stream', {
+    const client = createSSEWithBackoff(API_PATHS.loginStatusStream, {
       onOpen: () => {
         console.log('[SSE] 连接已打开')
       },
@@ -134,7 +136,7 @@ export default function LiepinPage() {
 
   const fetchAllData = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/liepin/config')
+      const response = await fetch(API_PATHS.liepin.config)
       const data = await response.json()
 
       console.log('Fetched liepin data:', data)
@@ -162,7 +164,7 @@ export default function LiepinPage() {
   const handleSave = async () => {
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await fetch('http://localhost:8888/api/liepin/config', {
+      const response = await fetch(API_PATHS.liepin.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +175,7 @@ export default function LiepinPage() {
       if (response.ok) {
         // 统一保存 Cookie（Liepin）
         try {
-          await fetch('http://localhost:8888/api/cookie/save?platform=liepin', { method: 'POST' })
+          await fetch(API_PATHS.cookieSave('liepin'), { method: 'POST' })
         } catch (e) {
           console.warn('保存 Cookie 失败（Liepin）:', e)
         }
@@ -196,7 +198,7 @@ export default function LiepinPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch('http://localhost:8888/api/liepin/start', {
+      const response = await fetch(API_PATHS.liepin.start, {
         method: 'POST',
       })
       const data = await response.json()
@@ -217,7 +219,7 @@ export default function LiepinPage() {
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/liepin/stop', {
+      const response = await fetch(API_PATHS.liepin.stop, {
         method: 'POST',
       })
       const data = await response.json()
@@ -237,7 +239,7 @@ export default function LiepinPage() {
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/liepin/logout', { method: 'POST' })
+      const response = await fetch(API_PATHS.liepin.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)
@@ -335,7 +337,20 @@ export default function LiepinPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="keywords">搜索关键词</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="keywords">搜索关键词</Label>
+                  <CommonOptionSelector
+                    type="keyword"
+                    mode="multi"
+                    currentValues={config.keywords ? config.keywords.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []}
+                    onSelect={(values) => {
+                      // 合并新选择的关键词到现有关键词
+                      const currentArr = config.keywords ? config.keywords.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+                      const merged = [...new Set([...currentArr, ...values])]
+                      setConfig({ ...config, keywords: merged.join(', ') })
+                    }}
+                  />
+                </div>
                 <Input
                   id="keywords"
                   value={config.keywords || ''}
@@ -348,19 +363,33 @@ export default function LiepinPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="city">工作城市</Label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomCity(!isCustomCity)
-                      if (!isCustomCity) {
-                        // 切换到手动输入时，清空当前值
-                        setConfig({ ...config, city: '' })
-                      }
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {isCustomCity ? '从列表选择' : '手动输入'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <CommonOptionSelector
+                      type="city"
+                      mode="single"
+                      currentValues={config.city ? [config.city] : []}
+                      onSelect={(values) => {
+                        if (values.length > 0) {
+                          // 猎聘直接使用城市名称
+                          setConfig({ ...config, city: values[0] })
+                          setIsCustomCity(false)
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCity(!isCustomCity)
+                        if (!isCustomCity) {
+                          // 切换到手动输入时，清空当前值
+                          setConfig({ ...config, city: '' })
+                        }
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {isCustomCity ? '从列表选择' : '手动输入'}
+                    </button>
+                  </div>
                 </div>
                 {isCustomCity ? (
                   <Input

@@ -1,17 +1,30 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { createSSEWithBackoff } from '@/lib/sse'
-import { createPortal } from 'react-dom'
-import { BiBriefcase, BiSave, BiSearch, BiMap, BiMoney, BiBuilding, BiTime, BiBarChart, BiTrash, BiPlus, BiPlay, BiStop, BiLogOut } from 'react-icons/bi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {useCallback, useEffect, useRef, useState} from 'react'
+import {createSSEWithBackoff} from '@/lib/sse'
+import {createPortal} from 'react-dom'
+import {
+    BiBriefcase,
+    BiBuilding,
+    BiLogOut,
+    BiMoney,
+    BiPlay,
+    BiPlus,
+    BiSave,
+    BiSearch,
+    BiStop,
+    BiTrash
+} from 'react-icons/bi'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import {Select} from '@/components/ui/select'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import PageHeader from '@/app/components/PageHeader'
 import AnalysisContent from '@/app/boss/analysis/AnalysisContent'
+import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import {API_PATHS} from '@/lib/api-config'
 
 interface BossConfig {
   id?: number
@@ -115,7 +128,7 @@ export default function BossPage() {
       return
     }
 
-    const client = createSSEWithBackoff('http://localhost:8888/api/jobs/login-status/stream', {
+    const client = createSSEWithBackoff(API_PATHS.loginStatusStream, {
       onOpen: () => {
         console.log('[SSE] 连接已打开')
       },
@@ -161,7 +174,7 @@ export default function BossPage() {
 
   const fetchAllData = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/boss/config')
+      const response = await fetch(API_PATHS.boss.config)
       const data = await response.json()
 
       console.log('Fetched data:', data)
@@ -382,7 +395,7 @@ export default function BossPage() {
         stage: toBracketList(selectedStage),
         salary: toBracketList(selectedSalary),
       }
-      const response = await fetch('http://localhost:8888/api/boss/config', {
+      const response = await fetch(API_PATHS.boss.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -393,7 +406,7 @@ export default function BossPage() {
       if (response.ok) {
         // 统一保存 Cookie（Boss）
         try {
-          await fetch('http://localhost:8888/api/cookie/save?platform=boss', { method: 'POST' })
+          await fetch(API_PATHS.cookieSave('boss'), { method: 'POST' })
         } catch (e) {
           console.warn('保存 Cookie 失败（Boss）:', e)
         }
@@ -428,7 +441,7 @@ export default function BossPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:8888/api/boss/config/blacklist', {
+      const response = await fetch(API_PATHS.boss.blacklist, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -454,7 +467,7 @@ export default function BossPage() {
 
   const handleDeleteBlacklist = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8888/api/boss/config/blacklist/${id}`, {
+      const response = await fetch(API_PATHS.boss.blacklistById(id), {
         method: 'DELETE',
       })
 
@@ -473,7 +486,7 @@ export default function BossPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch('http://localhost:8888/api/boss/start', {
+      const response = await fetch(API_PATHS.boss.start, {
         method: 'POST',
       })
       const data = await response.json()
@@ -494,7 +507,7 @@ export default function BossPage() {
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/boss/stop', {
+      const response = await fetch(API_PATHS.boss.stop, {
         method: 'POST',
       })
       const data = await response.json()
@@ -516,7 +529,7 @@ export default function BossPage() {
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/boss/logout', { method: 'POST' })
+      const response = await fetch(API_PATHS.boss.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)
@@ -614,7 +627,20 @@ export default function BossPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="keywords">搜索关键词</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="keywords">搜索关键词</Label>
+                    <CommonOptionSelector
+                      type="keyword"
+                      mode="multi"
+                      currentValues={keywordsDisplay ? keywordsDisplay.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []}
+                      onSelect={(values) => {
+                        // 合并新选择的关键词到现有关键词
+                        const currentArr = keywordsDisplay ? keywordsDisplay.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+                        const merged = [...new Set([...currentArr, ...values])]
+                        setKeywordsDisplay(merged.join(', '))
+                      }}
+                    />
+                  </div>
                   <Input
                     id="keywords"
                     value={keywordsDisplay}
@@ -625,7 +651,28 @@ export default function BossPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="city">工作城市</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="city">工作城市</Label>
+                    <CommonOptionSelector
+                      type="city"
+                      mode="single"
+                      currentValues={config.cityCode ? [options.city.find(c => c.code === config.cityCode)?.name || ''].filter(Boolean) : []}
+                      onSelect={(values) => {
+                        if (values.length > 0) {
+                          const cityName = values[0]
+                          // 从城市选项中查找对应的 code
+                          const cityOption = options.city.find(c => c.name === cityName)
+                          if (cityOption) {
+                            setConfig({ ...config, cityCode: cityOption.code })
+                          } else {
+                            // 如果找不到对应 code，直接用名称作为值（兼容处理）
+                            console.warn(`未找到城市 ${cityName} 的代码，使用名称作为值`)
+                            setConfig({ ...config, cityCode: cityName })
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                   <Select
                     id="city"
                     value={config.cityCode || ''}

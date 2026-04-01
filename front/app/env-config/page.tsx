@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { BiSave, BiKey, BiLinkExternal, BiCodeAlt, BiInfoCircle } from 'react-icons/bi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {useEffect, useState} from 'react'
+import {BiCodeAlt, BiInfoCircle, BiKey, BiLinkExternal, BiSave} from 'react-icons/bi'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
 import PageHeader from '@/app/components/PageHeader'
+import {API_PATHS} from '@/lib/api-config'
 
 export default function EnvConfig() {
   const [envConfig, setEnvConfig] = useState({
@@ -29,7 +30,7 @@ export default function EnvConfig() {
   const fetchConfig = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:8888/api/config', {
+      const response = await fetch(API_PATHS.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export default function EnvConfig() {
         DINGTALK_IS_SEND: String(envConfig.dingtalkIsSend ?? 0),
       }
 
-      const response = await fetch('http://localhost:8888/api/config', {
+      const response = await fetch(API_PATHS.config, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

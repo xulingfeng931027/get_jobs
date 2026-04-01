@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createSSEWithBackoff } from '@/lib/sse'
-import { BiLogOut, BiSave, BiBriefcase, BiPlay, BiStop } from 'react-icons/bi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {useEffect, useState} from 'react'
+import {createSSEWithBackoff} from '@/lib/sse'
+import {BiBriefcase, BiLogOut, BiPlay, BiSave, BiStop} from 'react-icons/bi'
+import {Button} from '@/components/ui/button'
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import {Select} from '@/components/ui/select'
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import AnalysisContent from '@/app/zhilian/analysis/AnalysisContent'
 import PageHeader from '@/app/components/PageHeader'
+import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import {API_PATHS} from '@/lib/api-config'
 
 interface ZhilianConfig {
   id?: number
@@ -44,7 +46,7 @@ export default function ZhilianPage() {
       return
     }
 
-    const client = createSSEWithBackoff('http://localhost:8888/api/jobs/login-status/stream', {
+    const client = createSSEWithBackoff(API_PATHS.loginStatusStream, {
       onOpen: () => console.log('[智联招聘 SSE] 连接已打开'),
       onError: (e, attempt, delay) => {
         console.warn(`[智联招聘 SSE] 连接错误，第${attempt}次重连，延迟 ${delay}ms`, e)
@@ -116,7 +118,7 @@ export default function ZhilianPage() {
 
   const fetchAllData = async () => {
     try {
-      const res = await fetch('http://localhost:8888/api/zhilian/config')
+      const res = await fetch(API_PATHS.zhilian.config)
       const data = await res.json()
       if (data.config) {
         const normalized = { ...data.config }
@@ -137,7 +139,7 @@ export default function ZhilianPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('http://localhost:8888/api/zhilian/config', { method: 'GET' })
+        const res = await fetch(API_PATHS.zhilian.config, { method: 'GET' })
         const ok = !!res && res.ok
         setBackendAvailable(ok)
         if (ok) {
@@ -156,7 +158,7 @@ export default function ZhilianPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch('http://localhost:8888/api/zhilian/start', { method: 'POST' })
+      const response = await fetch(API_PATHS.zhilian.start, { method: 'POST' })
       const data = await response.json()
       if (!data.success) setIsDelivering(false)
     } catch (error) {
@@ -166,7 +168,7 @@ export default function ZhilianPage() {
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/zhilian/stop', { method: 'POST' })
+      const response = await fetch(API_PATHS.zhilian.stop, { method: 'POST' })
       const data = await response.json()
       if (data.success) setIsDelivering(false)
     } catch (error) {}
@@ -174,7 +176,7 @@ export default function ZhilianPage() {
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/zhilian/logout', { method: 'POST' })
+      const response = await fetch(API_PATHS.zhilian.logout, { method: 'POST' })
       const data = await response.json()
       setIsLoggedIn(false)
       setLogoutResult({ success: data.success, message: data.success ? '已退出登录，Cookie已清空。' : data.message })
@@ -187,7 +189,7 @@ export default function ZhilianPage() {
 
   const handleSaveCookie = async () => {
     try {
-      const response = await fetch('http://localhost:8888/api/cookie/save?platform=zhilian', { method: 'POST' })
+      const response = await fetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' })
       const data = await response.json()
       setSaveResult({ success: data.success, message: data.success ? '配置保存成功。' : data.message })
       setShowSaveDialog(true)
@@ -200,13 +202,13 @@ export default function ZhilianPage() {
   const handleSaveConfig = async () => {
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await fetch('http://localhost:8888/api/zhilian/config', {
+      const response = await fetch(API_PATHS.zhilian.config, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       if (response.ok) {
-        try { await fetch('http://localhost:8888/api/cookie/save?platform=zhilian', { method: 'POST' }) } catch {}
+        try { await fetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' }) } catch {}
         await fetchAllData()
         setSaveResult({ success: true, message: '保存成功，配置已更新。' })
       } else {
@@ -294,7 +296,20 @@ export default function ZhilianPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>搜索关键词（逗号分隔）</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>搜索关键词（逗号分隔）</Label>
+                      <CommonOptionSelector
+                        type="keyword"
+                        mode="multi"
+                        currentValues={config.keywords ? config.keywords.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []}
+                        onSelect={(values) => {
+                          // 合并新选择的关键词到现有关键词
+                          const currentArr = config.keywords ? config.keywords.split(/[,，]/).map(s => s.trim()).filter(Boolean) : []
+                          const merged = [...new Set([...currentArr, ...values])]
+                          setConfig((c) => ({ ...c, keywords: merged.join(', ') }))
+                        }}
+                      />
+                    </div>
                     <Input
                       placeholder="如：Java, 后端, Spring"
                       value={config.keywords || ''}
@@ -302,7 +317,27 @@ export default function ZhilianPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>城市</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>城市</Label>
+                      <CommonOptionSelector
+                        type="city"
+                        mode="single"
+                        currentValues={config.cityCode ? [options.city.find(c => c.code === config.cityCode)?.name || ''].filter(Boolean) : []}
+                        onSelect={(values) => {
+                          if (values.length > 0) {
+                            const cityName = values[0]
+                            // 从城市选项中查找对应的 code
+                            const cityOption = options.city.find(c => c.name === cityName)
+                            if (cityOption) {
+                              setConfig((c) => ({ ...c, cityCode: cityOption.code }))
+                            } else {
+                              // 如果找不到对应 code，直接用名称
+                              setConfig((c) => ({ ...c, cityCode: cityName }))
+                            }
+                          }
+                        }}
+                      />
+                    </div>
                     <Select
                       value={config.cityCode || ''}
                       onChange={(e) => setConfig((c) => ({ ...c, cityCode: e.target.value }))}
