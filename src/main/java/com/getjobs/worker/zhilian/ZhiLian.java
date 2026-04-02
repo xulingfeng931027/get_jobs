@@ -1,6 +1,7 @@
 package com.getjobs.worker.zhilian;
 
 import com.getjobs.application.entity.ZhilianJobDataEntity;
+import com.getjobs.application.service.BlacklistService;
 import com.getjobs.application.service.ZhilianService;
 import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.Job;
@@ -48,6 +49,7 @@ public class ZhiLian {
     private static final String HOME_URL = "https://www.zhaopin.com/sou/";
 
     private final ZhilianService zhilianService;
+    private final BlacklistService blacklistService;
 
     private static class PageJob {
         int index;
@@ -305,6 +307,13 @@ public class ZhiLian {
                 if (shouldStop()) {
                     sendProgress("用户取消投递或已达上限", null, null);
                     return false;
+                }
+
+                // 公共黑名单过滤
+                if (blacklistService != null && blacklistService.isBlacklisted(pj.jobTitle, pj.companyName)) {
+                    String matchedKeyword = blacklistService.findMatchedBlacklistKeyword(pj.jobTitle, pj.companyName);
+                    log.info("[智联] 黑名单跳过：职位【{}】，公司【{}】，关键词【{}】", pj.jobTitle, pj.companyName, matchedKeyword != null ? matchedKeyword : "");
+                    continue;
                 }
 
                 Locator card = page.locator("div.joblist-box__item").nth(pj.index);

@@ -1,11 +1,12 @@
 package com.getjobs.worker.liepin;
 
-import com.getjobs.worker.utils.Bot;
-import com.getjobs.worker.utils.PlaywrightUtil;
-import com.getjobs.application.service.LiepinService;
-import com.getjobs.application.entity.LiepinEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.getjobs.application.entity.LiepinEntity;
+import com.getjobs.application.service.BlacklistService;
+import com.getjobs.application.service.LiepinService;
+import com.getjobs.worker.utils.Bot;
+import com.getjobs.worker.utils.PlaywrightUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
@@ -13,17 +14,18 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 
-// 移除保存页面源码相关的导入
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Supplier;
 
 import static com.getjobs.worker.liepin.Locators.*;
+
+// 移除保存页面源码相关的导入
 
 
 /**
@@ -51,6 +53,9 @@ public class Liepin {
     private Page page;
     @Autowired
     private LiepinService liepinService;
+
+    @Autowired
+    private BlacklistService blacklistService;
 
     public interface ProgressCallback {
         void onProgress(String message, Integer current, Integer total);
@@ -352,6 +357,13 @@ public class Liepin {
             if (jobName == null) jobName = "岗位";
             if (companyName == null) companyName = "公司";
             if (salary == null) salary = "";
+
+            // 公共黑名单过滤
+            if (blacklistService != null && blacklistService.isBlacklisted(jobName, companyName)) {
+                String matchedKeyword = blacklistService.findMatchedBlacklistKeyword(jobName, companyName);
+                log.info("[猎聘] 黑名单跳过：职位【{}】，公司【{}】，关键词【{}】", jobName, companyName, matchedKeyword != null ? matchedKeyword : "");
+                continue;
+            }
             
             try {
                 // 使用JavaScript滚动到卡片位置，更稳定

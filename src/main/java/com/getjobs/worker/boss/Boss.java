@@ -2,6 +2,7 @@ package com.getjobs.worker.boss;
 
 import com.getjobs.application.entity.AiEntity;
 import com.getjobs.application.service.AiService;
+import com.getjobs.application.service.BlacklistService;
 import com.getjobs.application.service.BossService;
 import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.Job;
@@ -49,6 +50,7 @@ public class Boss {
     private BossConfig config;
     private final BossService bossService;
     private final AiService aiService;
+    private final BlacklistService blacklistService;
     private Set<String> blackCompanies;
     private Set<String> blackRecruiters;
     private Set<String> blackJobs;
@@ -363,10 +365,10 @@ public class Boss {
                     log.info("被过滤：职位黑名单命中 | 公司：{} | 岗位：{} | 关键词：{}", bossCompany != null ? bossCompany : "", jobName, term != null ? term : "");
                     continue;
                 }
-                // HR活跃状态过滤：当开启过滤开关且活跃描述包含“年”时，视为不活跃
+                // HR活跃状态过滤：当开启过滤开关且活跃描述包含"年"时，视为不活跃
                 boolean hrInactiveByYear = bossActive != null && bossActive.contains("年");
                 if (Boolean.TRUE.equals(config.getFilterDeadHR()) && hrInactiveByYear) {
-                    log.info("被过滤：HR活跃状态包含‘年’ | 公司：{} | 岗位：{} | 活跃：{}", bossCompany != null ? bossCompany : "", jobName != null ? jobName : "", bossActive);
+                    log.info("被过滤：HR活跃状态包含'年' | 公司：{} | 岗位：{} | 活跃：{}", bossCompany != null ? bossCompany : "", jobName != null ? jobName : "", bossActive);
                     continue;
                 }
                 if (bossCompany != null && blackCompanies != null && blackCompanies.stream().anyMatch(bossCompany::contains)) {
@@ -377,6 +379,13 @@ public class Boss {
                 if (bossJobTitle != null && blackRecruiters != null && blackRecruiters.stream().anyMatch(bossJobTitle::contains)) {
                     String term = findMatchedTerm(blackRecruiters, bossJobTitle);
                     log.info("被过滤：招聘者黑名单命中 | 公司：{} | 岗位：{} | 招聘者：{} | 关键词：{}", bossCompany != null ? bossCompany : "", jobName != null ? jobName : "", bossJobTitle, term != null ? term : "");
+                    continue;
+                }
+                
+                // 公共黑名单过滤（来自 common_option 表）
+                if (blacklistService != null && blacklistService.isBlacklisted(jobName, bossCompany)) {
+                    String matchedKeyword = blacklistService.findMatchedBlacklistKeyword(jobName, bossCompany);
+                    log.info("被过滤：公共黑名单命中 | 公司：{} | 岗位：{} | 关键词：{}", bossCompany != null ? bossCompany : "", jobName != null ? jobName : "", matchedKeyword != null ? matchedKeyword : "");
                     continue;
                 }
 

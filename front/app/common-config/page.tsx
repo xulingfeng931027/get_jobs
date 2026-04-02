@@ -10,7 +10,7 @@ import {API_PATHS} from '@/lib/api-config'
 
 interface CommonOption {
   id: number
-  type: 'keyword' | 'city' | 'salary_range'
+  type: 'keyword' | 'city' | 'salary_range' | 'blacklist'
   label: string
   value: string
   sortOrder: number
@@ -27,11 +27,13 @@ export default function CommonConfigPage() {
   const [cityInput, setCityInput] = useState('')
   const [salaryMin, setSalaryMin] = useState('')
   const [salaryMax, setSalaryMax] = useState('')
+  const [blacklistInput, setBlacklistInput] = useState('')
 
   // 错误提示
   const [keywordError, setKeywordError] = useState('')
   const [cityError, setCityError] = useState('')
   const [salaryError, setSalaryError] = useState('')
+  const [blacklistError, setBlacklistError] = useState('')
 
   // 编辑状态
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -66,6 +68,7 @@ export default function CommonConfigPage() {
   const keywordOptions = options.filter(o => o.type === 'keyword')
   const cityOptions = options.filter(o => o.type === 'city')
   const salaryOptions = options.filter(o => o.type === 'salary_range')
+  const blacklistOptions = options.filter(o => o.type === 'blacklist')
 
   // 检查是否存在重复项
   const isDuplicate = (type: string, label: string): boolean => {
@@ -317,6 +320,54 @@ export default function CommonConfigPage() {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleAddSalary()
+    }
+  }
+
+  // 添加黑名单关键词
+  const handleAddBlacklist = async () => {
+    const keyword = blacklistInput.trim()
+    if (!keyword) {
+      setBlacklistError('请输入关键词')
+      return
+    }
+
+    if (isDuplicate('blacklist', keyword)) {
+      setBlacklistError('该关键词已存在')
+      return
+    }
+
+    try {
+      const response = await fetch(API_PATHS.commonOption, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'blacklist',
+          label: keyword,
+          value: keyword,
+          sortOrder: blacklistOptions.length,
+        }),
+      })
+
+      if (response.ok) {
+        setBlacklistInput('')
+        setBlacklistError('')
+        await fetchOptions()
+      } else {
+        const errorText = await response.text()
+        console.error('添加黑名单关键词失败:', response.status, errorText)
+        setBlacklistError(`添加失败: ${response.status}`)
+      }
+    } catch (error) {
+      console.error('添加黑名单关键词失败:', error)
+      setBlacklistError('网络错误，请检查后端服务')
+    }
+  }
+
+  // 处理黑名单回车添加
+  const handleBlacklistKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddBlacklist()
     }
   }
 
@@ -660,6 +711,111 @@ export default function CommonConfigPage() {
                 )}
               </div>
               {editError && editingId && salaryOptions.some(o => o.id === editingId) && (
+                <p className="text-xs text-red-500">{editError}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 黑名单区域 */}
+        <Card className="animate-in fade-in slide-in-from-bottom-8 duration-700 border-red-200 dark:border-red-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <BiX className="text-red-500" />
+              黑名单
+            </CardTitle>
+            <CardDescription>添加关键词，投递时将自动跳过职位名称或公司名包含这些关键词的岗位</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* 输入区域 */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    value={blacklistInput}
+                    onChange={(e) => {
+                      setBlacklistInput(e.target.value)
+                      setBlacklistError('')
+                    }}
+                    onKeyDown={handleBlacklistKeyDown}
+                    placeholder="输入黑名单关键词，如：外包、派遣"
+                    className="border-red-200 dark:border-red-800 focus-visible:ring-red-400"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddBlacklist}
+                  className="rounded-full bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white px-4"
+                >
+                  <BiPlus className="mr-1" /> 添加
+                </Button>
+              </div>
+              {blacklistError && (
+                <p className="text-xs text-red-500">{blacklistError}</p>
+              )}
+
+              {/* 标签列表 */}
+              <div className="flex flex-wrap gap-2">
+                {blacklistOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">暂无黑名单关键词，请添加</p>
+                ) : (
+                  blacklistOptions.map((option) => (
+                    <span
+                      key={option.id}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-red-500/10 to-rose-500/10 border border-red-500/20 text-red-700 dark:text-red-300"
+                    >
+                      {editingId === option.id ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={editValue}
+                            onChange={(e) => {
+                              setEditValue(e.target.value)
+                              setEditError('')
+                            }}
+                            onKeyDown={(e) => handleEditKeyDown(e, option)}
+                            className="h-6 w-32 px-2 py-0 text-sm"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => saveEdit(option)}
+                            className="p-0.5 rounded-full hover:bg-red-500/20 transition-colors"
+                            title="保存"
+                          >
+                            <BiPlus className="text-base" />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-0.5 rounded-full hover:bg-red-500/20 transition-colors"
+                            title="取消"
+                          >
+                            <BiX className="text-base" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="cursor-pointer" onClick={() => startEdit(option)}>
+                            {option.label}
+                          </span>
+                          <button
+                            onClick={() => startEdit(option)}
+                            className="p-0.5 rounded-full hover:bg-red-500/20 transition-colors"
+                            title="编辑"
+                          >
+                            <BiEdit className="text-sm" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(option.id)}
+                            className="p-0.5 rounded-full hover:bg-red-500/20 transition-colors"
+                            title="删除"
+                          >
+                            <BiX className="text-base" />
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+              {editError && editingId && blacklistOptions.some(o => o.id === editingId) && (
                 <p className="text-xs text-red-500">{editError}</p>
               )}
             </div>

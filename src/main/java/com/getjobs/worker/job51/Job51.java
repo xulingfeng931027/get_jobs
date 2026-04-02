@@ -1,5 +1,6 @@
 package com.getjobs.worker.job51;
 
+import com.getjobs.application.service.BlacklistService;
 import com.getjobs.application.service.Job51Service;
 import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.JobUtils;
@@ -44,6 +45,7 @@ public class Job51 {
 
     private final List<String> resultList = new ArrayList<>();
     private final Job51Service job51Service;
+    private final BlacklistService blacklistService;
     private boolean networkHooked = false;
     private boolean reachedDailyLimit = false;
     private final java.util.Set<String> processedRequestIds = new java.util.HashSet<>();
@@ -288,11 +290,20 @@ public class Job51 {
 
                 try {
                     Locator checkbox = checkboxes.nth(i);
-                    // 使用JavaScript点击，避免元素被遮挡
-                    checkbox.evaluate("el => el.click()");
 
                     String title = i < titles.count() ? titles.nth(i).textContent() : "未知职位";
                     String company = i < companies.count() ? companies.nth(i).textContent() : "未知公司";
+
+                    // 公共黑名单过滤
+                    if (blacklistService != null && blacklistService.isBlacklisted(title, company)) {
+                        String matchedKeyword = blacklistService.findMatchedBlacklistKeyword(title, company);
+                        log.info("[51job] 黑名单跳过：职位【{}】，公司【{}】，关键词【{}】", title, company, matchedKeyword != null ? matchedKeyword : "");
+                        continue;
+                    }
+
+                    // 使用JavaScript点击，避免元素被遮挡
+                    checkbox.evaluate("el => el.click()");
+
                     String jobInfo = company + " | " + title;
                     resultList.add(jobInfo);
                     // 存储职位信息用于投递成功后记录
