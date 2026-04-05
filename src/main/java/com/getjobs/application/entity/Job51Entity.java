@@ -1,5 +1,6 @@
 package com.getjobs.application.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -35,6 +36,10 @@ public class Job51Entity {
 
     // 状态与时间戳
     private Integer delivered; // 0=未投递 1=已投递
-    private String createTime;
-    private String updateTime;
+    
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+    
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

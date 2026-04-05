@@ -7,7 +7,6 @@ spring:
     app:
       name: Get Jobs
       version: 0.0.1-SNAPSHOT
-      description: https://github.com/loks666/get_jobs
   banner:
     charset: UTF-8
     location: classpath:banner.txt
@@ -21,11 +20,6 @@ spring:
       connection-test-query: SELECT 1
       idle-timeout: 600000
       max-lifetime: 1800000
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      continue-on-error: true
   output:
     ansi:
       enabled: always
@@ -62,3 +56,35 @@ admin:
     secret: ${ADMIN_JWT_SECRET:G3tJ0bs-Adm1n-Secr3t-K3y-2025!@#}
     expiration: 86400000  # 24小时（毫秒）
     issuer: get-jobs-admin
+
+# Playwright Agent 配置
+playwright:
+  # 性能调优
+  slow-mo: 20                    # 操作延迟（毫秒），原 50
+  navigation-timeout: 30000      # 默认导航超时
+  login-check-interval: 5000     # 登录检测间隔（毫秒），原 3000
+  
+  # 平台差异化超时
+  platforms:
+    boss:
+      navigation-timeout: 30000
+    liepin:
+      navigation-timeout: 35000
+    job51:
+      navigation-timeout: 40000
+    zhilian:
+      navigation-timeout: 35000
+  
+  # 稳定性
+  max-retries: 3
+  retry-base-delay: 1000
+  retry-max-delay: 10000
+  health-check-interval: 10000   # 浏览器健康检查间隔
+  
+  # 资源管理
+  max-pages: 4
+  idle-page-timeout: 300000      # 空闲页面回收时间（5分钟）
+  resource-blocking-enabled: false # 请求拦截（默认关闭）
+  
+  # Cookie 管理
+  cookie-refresh-before-expiry: 3600000  # 过期前1小时刷新

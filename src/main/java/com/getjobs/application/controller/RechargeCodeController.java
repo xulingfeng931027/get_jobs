@@ -28,17 +28,31 @@ public class RechargeCodeController {
 
         try {
             int count = (int) request.get("count");
-            int amount = (int) request.get("amount");
+            String type = (String) request.getOrDefault("type", "count");
+            int applicationCount = request.get("applicationCount") != null ? (int) request.get("applicationCount") : 0;
+            int subscriptionDays = request.get("subscriptionDays") != null ? (int) request.get("subscriptionDays") : 0;
             int bonus = (int) request.getOrDefault("bonus", 0);
             String createdBy = (String) request.get("createdBy");
 
-            if (count <= 0 || amount <= 0) {
+            if (count <= 0 || count > 1000) {
                 result.put("success", false);
-                result.put("message", "数量和金额必须大于 0");
+                result.put("message", "生成数量必须在 1-1000 之间");
                 return ResponseEntity.badRequest().body(result);
             }
 
-            Map<String, Object> data = rechargeCodeService.generateCodes(count, amount, bonus, createdBy);
+            if ("count".equals(type) && applicationCount <= 0) {
+                result.put("success", false);
+                result.put("message", "次数码必须指定投递次数");
+                return ResponseEntity.badRequest().body(result);
+            }
+
+            if ("subscription".equals(type) && subscriptionDays <= 0) {
+                result.put("success", false);
+                result.put("message", "订阅码必须指定订阅天数");
+                return ResponseEntity.badRequest().body(result);
+            }
+
+            Map<String, Object> data = rechargeCodeService.generateCodes(count, type, applicationCount, subscriptionDays, bonus, createdBy);
             result.put("success", true);
             result.put("message", "成功生成 " + count + " 个充值码");
             result.put("data", data);

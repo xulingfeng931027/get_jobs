@@ -16,6 +16,9 @@ public class RechargeCodeEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String code;
+    private String type;
+    private Integer applicationCount;
+    private Integer subscriptionDays;
     private Integer amount;
     private Integer bonus;
     private Integer totalValue;

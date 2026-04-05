@@ -60,3 +60,5 @@ dist/
 .gradle/
 /out/
 /front-admin/node_modules/
+node_modules
+/.qoder/

@@ -2,6 +2,7 @@ package com.getjobs.application.controller;
 
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.entity.ZhilianConfigEntity;
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.CookieService;
 import com.getjobs.application.service.ZhilianService;
 import com.getjobs.worker.manager.PlaywrightManager;
@@ -38,6 +39,9 @@ public class ZhilianController {
 
     @Autowired
     private ZhilianJobService zhilianJobService;
+
+    @Autowired
+    private BillingService billingService;
 
     // ==================== 配置管理相关接口 ====================
 
@@ -267,10 +271,21 @@ public class ZhilianController {
      * @return 响应结果
      */
     @PostMapping("/start")
-    public ResponseEntity<Map<String, Object>> startZhilianJob() {
+    public ResponseEntity<Map<String, Object>> startZhilianJob(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 计费检查
+            if (userId != null) {
+                Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) billingCheck.get("allowed")) {
+                    response.put("success", false);
+                    response.put("message", billingCheck.get("reason"));
+                    response.put("billingInfo", billingCheck);
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             // 未登录则不允许启动
             if (!playwrightManager.isLoggedIn("zhilian")) {
                 response.put("success", false);
@@ -287,11 +302,21 @@ public class ZhilianController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // 异步启动新任务
+            // 异步启动新任务，投递完成后扣费
+            final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
-                zhilianJobService.executeDelivery(progressMessage -> {
-                    log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
-                });
+                try {
+                    zhilianJobService.executeDelivery(progressMessage -> {
+                        log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
+                    });
+                    
+                    // 投递完成后扣费（按1次计算）
+                    if (finalUserId != null) {
+                        billingService.deductAfterDelivery(finalUserId, 1, "zhilian");
+                    }
+                } catch (Exception e) {
+                    log.error("智联招聘投递任务执行失败", e);
+                }
             });
 
             response.put("success", true);

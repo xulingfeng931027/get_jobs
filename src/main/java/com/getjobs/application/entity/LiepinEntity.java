@@ -1,5 +1,6 @@
 package com.getjobs.application.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -41,6 +42,9 @@ public class LiepinEntity {
     private Integer delivered;
 
     // ========== 系统字段 ==========
-    private LocalDateTime createTime;
-    private LocalDateTime updateTime;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+    
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

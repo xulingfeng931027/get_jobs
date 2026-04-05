@@ -1,10 +1,17 @@
 "use client";
 
-import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "./components/Sidebar";
 import ContentArea from "./components/ContentArea";
-import { ThemeProvider } from "next-themes";
+import {ThemeProvider} from "next-themes";
+import dynamic from "next/dynamic";
+import { UserProvider } from "@/lib/auth-context";
+
+// 动态导入 Electron 状态栏（仅客户端）
+const ElectronStatusBar = dynamic(
+  () => import("./components/ElectronStatusBar"),
+  { ssr: false }
+);
 
 export default function RootLayout({
   children,
@@ -28,12 +35,16 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={false}
         >
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <ContentArea>
-              {children}
-            </ContentArea>
-          </div>
+          <UserProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <ContentArea>
+                {children}
+              </ContentArea>
+            </div>
+            {/* Electron 状态栏（仅在 Electron 环境中显示） */}
+            <ElectronStatusBar />
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>

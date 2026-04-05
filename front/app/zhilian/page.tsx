@@ -317,27 +317,7 @@ export default function ZhilianPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>城市</Label>
-                      <CommonOptionSelector
-                        type="city"
-                        mode="single"
-                        currentValues={config.cityCode ? [options.city.find(c => c.code === config.cityCode)?.name || ''].filter(Boolean) : []}
-                        onSelect={(values) => {
-                          if (values.length > 0) {
-                            const cityName = values[0]
-                            // 从城市选项中查找对应的 code
-                            const cityOption = options.city.find(c => c.name === cityName)
-                            if (cityOption) {
-                              setConfig((c) => ({ ...c, cityCode: cityOption.code }))
-                            } else {
-                              // 如果找不到对应 code，直接用名称
-                              setConfig((c) => ({ ...c, cityCode: cityName }))
-                            }
-                          }
-                        }}
-                      />
-                    </div>
+                    <Label>城市</Label>
                     <Select
                       value={config.cityCode || ''}
                       onChange={(e) => setConfig((c) => ({ ...c, cityCode: e.target.value }))}

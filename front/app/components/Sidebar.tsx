@@ -3,14 +3,17 @@
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BiBrain, BiBriefcase, BiCog, BiEnvelope, BiMoon, BiSearch, BiSun, BiTask, BiUserCircle} from 'react-icons/bi'
+import {BiBrain, BiBriefcase, BiCog, BiEnvelope, BiMoon, BiSearch, BiSun, BiTask, BiUserCircle, BiLogIn, BiUserPlus, BiDollar} from 'react-icons/bi'
 import {motion} from 'framer-motion'
 import {useTheme} from 'next-themes'
 import {API_PATHS} from '@/lib/api-config'
+import { useUser } from '@/lib/auth-context'
+import { getToken } from '@/lib/auth-api'
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
+  const { user, billing, isAuthenticated } = useUser()
   const [mounted, setMounted] = useState(false)
 
   // 健康检查状态：up / degraded / down / unknown
@@ -231,9 +234,52 @@ export default function Sidebar() {
         transition={{ delay: 0.8, duration: 0.5 }}
         className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 dark:border-strokedark"
       >
+        {/* 用户状态 */}
+        {isAuthenticated && user ? (
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-white text-sm mb-2">
+              <span>{user.username}</span>
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                {billing?.applicationCount ?? 0} 次
+              </span>
+            </div>
+            <Link
+              href="/billing"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                pathname === '/billing'
+                  ? 'bg-white/25 text-white'
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <BiDollar className="text-lg" />
+              <span>账户充值</span>
+              {billing?.hasSubscription && (
+                <span className="ml-auto text-xs bg-green-500 px-1.5 py-0.5 rounded">VIP</span>
+              )}
+            </Link>
+          </div>
+        ) : (
+          <div className="mb-3 space-y-2">
+            <Link
+              href="/auth/login"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-all duration-300"
+            >
+              <BiLogIn className="text-lg" />
+              <span>登录</span>
+            </Link>
+            <Link
+              href="/auth/register"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition-all duration-300"
+            >
+              <BiUserPlus className="text-lg" />
+              <span>注册</span>
+            </Link>
+          </div>
+        )}
+
         {/* 版本信息 */}
         <div className="text-center">
-          <p className="text-white/60 dark:text-waterloo text-xs">v1.0.0</p>
+          <p className="text-white/60 dark:text-waterloo text-xs">v1.1.0</p>
         </div>
       </motion.div>
     </motion.div>

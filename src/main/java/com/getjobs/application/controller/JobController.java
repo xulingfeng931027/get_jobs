@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.entity.Job51ConfigEntity;
 import com.getjobs.application.entity.Job51OptionEntity;
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.CookieService;
 import com.getjobs.application.service.Job51Service;
 import com.getjobs.worker.manager.PlaywrightManager;
@@ -46,6 +47,7 @@ public class JobController {
     private final Job51JobService job51JobService;
     private final PlaywrightManager playwrightManager;
     private final CookieService cookieService;
+    private final BillingService billingService;
 
     // SSE emitter lists
     private final List<SseEmitter> job51ProgressEmitters = new CopyOnWriteArrayList<>();
@@ -381,9 +383,20 @@ public class JobController {
 
     /** 启动51job自动投递任务 */
     @PostMapping("/51job/start")
-    public ResponseEntity<Map<String, Object>> start51jobJob() {
+    public ResponseEntity<Map<String, Object>> start51jobJob(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 计费检查
+            if (userId != null) {
+                Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) billingCheck.get("allowed")) {
+                    response.put("success", false);
+                    response.put("message", billingCheck.get("reason"));
+                    response.put("billingInfo", billingCheck);
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             if (!playwrightManager.isLoggedIn("51job")) {
                 response.put("success", false);
                 response.put("message", "请先登录51job");
@@ -396,11 +409,24 @@ public class JobController {
                 response.put("status", "running");
                 return ResponseEntity.badRequest().body(response);
             }
-            CompletableFuture.runAsync(() -> job51JobService.executeDelivery(pm -> {
-                // 推送到 SSE 并保留日志输出
-                sendJob51Progress(pm);
-                log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
-            }));
+            
+            // 启动投递任务，投递完成后扣费
+            final Long finalUserId = userId;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    job51JobService.executeDelivery(pm -> {
+                        sendJob51Progress(pm);
+                        log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
+                    });
+                    
+                    // 投递完成后扣费（按1次计算）
+                    if (finalUserId != null) {
+                        billingService.deductAfterDelivery(finalUserId, 1, "51job");
+                    }
+                } catch (Exception e) {
+                    log.error("51job投递任务执行失败", e);
+                }
+            });
             response.put("success", true);
             response.put("message", "51job任务启动成功");
             response.put("status", "started");

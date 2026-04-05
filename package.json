@@ -1,0 +1,97 @@
+{
+  "name": "get-jobs-desktop",
+  "version": "1.0.0",
+  "description": "Get Jobs 桌面应用 - 自动化求职平台",
+  "main": "electron/main.js",
+  "author": "GetJobs",
+  "license": "MIT",
+  "scripts": {
+    "electron:dev": "concurrently \"cd front && npm run dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "cd front && npm run build:prod && cd .. && electron-builder",
+    "electron:preview": "cd front && npm run build:prod && cd .. && electron .",
+    "dist": "cd front && npm run build:prod && cd .. && electron-builder --publish=always",
+    "dist:win": "cd front && npm run build:prod && cd .. && electron-builder --win --publish=always",
+    "dist:mac": "cd front && npm run build:prod && cd .. && electron-builder --mac --publish=always",
+    "dist:linux": "cd front && npm run build:prod && cd .. && electron-builder --linux --publish=always"
+  },
+  "build": {
+    "appId": "com.getjobs.desktop",
+    "productName": "Get Jobs",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "front/out/**/*",
+      "node_modules/electron-log/**/*",
+      "node_modules/electron-updater/**/*",
+      "node_modules/builder-util-runtime/**/*",
+      "node_modules/lazy-val/**/*",
+      "node_modules/lru-cache/**/*",
+      "node_modules/semver/**/*",
+      "node_modules/js-yaml/**/*",
+      "node_modules/argparse/**/*",
+      "!node_modules/**/test/**/*",
+      "!node_modules/**/tests/**/*",
+      "!node_modules/**/*.md"
+    ],
+    "extraResources": [
+      {
+        "from": "build/libs",
+        "to": "app",
+        "filter": ["*.jar"]
+      },
+      {
+        "from": "src/main/resources",
+        "to": "resources",
+        "filter": ["**/*", "!**/*.java"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "electron/assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "electron/assets/icon.png",
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Get Jobs"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "loks666",
+        "repo": "get_jobs",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-log": "^5.1.2",
+    "electron-updater": "^6.1.8"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  }
+}

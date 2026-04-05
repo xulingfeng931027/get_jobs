@@ -195,8 +195,8 @@ public class ZhilianService {
     public void insertJob(ZhilianJobDataEntity entity) {
         if (entity == null) return;
         LocalDateTime now = LocalDateTime.now();
-        entity.setCreateTime(now);
-        entity.setUpdateTime(now);
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
         if (entity.getDeliveryStatus() == null) entity.setDeliveryStatus("未投递");
         zhilianJobDataMapper.insert(entity);
     }
@@ -205,7 +205,7 @@ public class ZhilianService {
         if (jobId == null || jobId.trim().isEmpty()) return;
         ZhilianJobDataEntity upd = new ZhilianJobDataEntity();
         upd.setDeliveryStatus("已投递");
-        upd.setUpdateTime(LocalDateTime.now());
+        upd.setUpdatedAt(LocalDateTime.now());
         com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<ZhilianJobDataEntity> uw =
                 new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
         uw.eq("job_id", jobId);
@@ -216,7 +216,7 @@ public class ZhilianService {
         if (jobTitle == null || companyName == null) return;
         ZhilianJobDataEntity upd = new ZhilianJobDataEntity();
         upd.setDeliveryStatus("已投递");
-        upd.setUpdateTime(LocalDateTime.now());
+        upd.setUpdatedAt(LocalDateTime.now());
         com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<ZhilianJobDataEntity> uw =
                 new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
         uw.eq("job_title", jobTitle).eq("company_name", companyName);
@@ -398,8 +398,8 @@ public class ZhilianService {
 
         // 每日趋势（按日期聚合 create_time）
         Map<String, Long> byDay = filtered.stream()
-                .filter(e -> e.getCreateTime() != null)
-                .collect(Collectors.groupingBy(e -> e.getCreateTime().toLocalDate().toString(), Collectors.counting()));
+                .filter(e -> e.getUpdatedAt() != null)
+                .collect(Collectors.groupingBy(e -> e.getUpdatedAt().toLocalDate().toString(), Collectors.counting()));
         byDay.entrySet().stream().sorted(Map.Entry.comparingByKey())
                 .forEach(en -> charts.dailyTrend.add(new NameValue(en.getKey(), en.getValue())));
 

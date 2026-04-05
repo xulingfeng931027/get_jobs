@@ -16,7 +16,11 @@ public class UserBalanceEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
-    private Integer balance;
+    private Integer applicationCount;
+    private Integer aiMatchCount;
+    private Integer aiGreetCount;
+    private Integer reportCount;
+    private LocalDateTime subscriptionEndDate;
     private Integer totalRecharge;
     private Integer totalConsumption;
     private LocalDateTime createdAt;

@@ -651,38 +651,17 @@ export default function BossPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="city">工作城市</Label>
-                    <CommonOptionSelector
-                      type="city"
-                      mode="single"
-                      currentValues={config.cityCode ? [options.city.find(c => c.code === config.cityCode)?.name || ''].filter(Boolean) : []}
-                      onSelect={(values) => {
-                        if (values.length > 0) {
-                          const cityName = values[0]
-                          // 从城市选项中查找对应的 code
-                          const cityOption = options.city.find(c => c.name === cityName)
-                          if (cityOption) {
-                            setConfig({ ...config, cityCode: cityOption.code })
-                          } else {
-                            // 如果找不到对应 code，直接用名称作为值（兼容处理）
-                            console.warn(`未找到城市 ${cityName} 的代码，使用名称作为值`)
-                            setConfig({ ...config, cityCode: cityName })
-                          }
-                        }
-                      }}
-                    />
-                  </div>
-                  <Select
-                    id="city"
-                    value={config.cityCode || ''}
-                    onChange={(e) => setConfig({ ...config, cityCode: e.target.value })}
-                  >
-                    {options.city.map((city) => (
-                      <option key={city.id} value={city.code}>
-                        {city.name}
-                      </option>
-                    ))}
+                <Label htmlFor="city">工作城市</Label>
+                <Select
+                  id="city"
+                  value={config.cityCode || ''}
+                  onChange={(e) => setConfig({ ...config, cityCode: e.target.value })}
+                >
+                  {options.city.map((city) => (
+                    <option key={city.id} value={city.code}>
+                      {city.name}
+                    </option>
+                  ))}
                 </Select>
                 <p className="text-xs text-muted-foreground">目标工作城市（按设定顺序显示）</p>
               </div>

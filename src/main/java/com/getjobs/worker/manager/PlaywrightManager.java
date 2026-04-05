@@ -121,13 +121,7 @@ public class PlaywrightManager {
             log.info("✓ Playwright引擎已启动");
 
             // 创建浏览器实例，使用固定CDP端口7866，最大化启动
-            browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
-                    .setHeadless(false) // 非无头模式，可视化调试
-                    .setSlowMo(50) // 放慢操作速度，便于调试
-                    .setArgs(List.of(
-                            "--remote-debugging-port=" + CDP_PORT, // 使用固定CDP端口
-                            "--start-maximized" // 最大化启动窗口
-                    )));
+            browser = launchBrowserWithFallback(playwright);
             log.info("✓ Chrome浏览器已启动 (调试端口: {})", CDP_PORT);
 
             // 创建共享的BrowserContext（所有平台在同一个窗口的不同标签页中）
@@ -172,6 +166,58 @@ public class PlaywrightManager {
             log.error("✗ 浏览器自动化引擎初始化失败", e);
             throw new RuntimeException("Playwright初始化失败", e);
         }
+    }
+
+    /**
+     * 启动浏览器，内置Chromium失败时自动降级到系统Chrome
+     */
+    private Browser launchBrowserWithFallback(Playwright pw) {
+        BrowserType.LaunchOptions options = new BrowserType.LaunchOptions()
+                .setHeadless(false)
+                .setSlowMo(50)
+                .setArgs(List.of(
+                        "--remote-debugging-port=" + CDP_PORT,
+                        "--start-maximized"
+                ));
+
+        // 第一次尝试：使用Playwright内置Chromium
+        try {
+            log.info("尝试使用Playwright内置Chromium启动...");
+            return pw.chromium().launch(options);
+        } catch (Exception e) {
+            log.warn("内置Chromium启动失败 ({}), 尝试降级到系统Chrome...", e.getMessage());
+        }
+
+        // 第二次尝试：使用系统已安装的Chrome浏览器
+        List<String> chromePaths = List.of(
+                System.getenv("ProgramFiles") + "\\Google\\Chrome\\Application\\chrome.exe",
+                System.getenv("ProgramFiles(x86)") + "\\Google\\Chrome\\Application\\chrome.exe",
+                System.getProperty("user.home") + "\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe"
+        );
+
+        for (String chromePath : chromePaths) {
+            java.io.File chromeFile = new java.io.File(chromePath);
+            if (chromeFile.exists()) {
+                try {
+                    log.info("检测到系统Chrome: {}", chromePath);
+                    BrowserType.LaunchOptions fallbackOptions = new BrowserType.LaunchOptions()
+                            .setHeadless(false)
+                            .setSlowMo(50)
+                            .setChannel("chrome")
+                            .setArgs(List.of(
+                                    "--remote-debugging-port=" + CDP_PORT,
+                                    "--start-maximized"
+                            ));
+                    return pw.chromium().launch(fallbackOptions);
+                } catch (Exception ex) {
+                    log.warn("系统Chrome启动也失败: {}", ex.getMessage());
+                }
+            }
+        }
+
+        throw new RuntimeException("无法启动浏览器：内置Chromium和系统Chrome均启动失败。" +
+                "请执行 'mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args=\"install chromium\"' 重新安装浏览器，" +
+                "或安装最新版 Visual C++ Redistributable (x64)");
     }
 
     /**

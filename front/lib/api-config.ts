@@ -72,6 +72,26 @@ export const API_PATHS = {
     list: `${API_BASE_URL}/api/liepin/list`,
     stats: `${API_BASE_URL}/api/liepin/stats`,
   },
+
+  // 用户认证
+  user: {
+    register: `${API_BASE_URL}/api/user/register`,
+    login: `${API_BASE_URL}/api/user/login`,
+    profile: `${API_BASE_URL}/api/user/profile`,
+    changePassword: `${API_BASE_URL}/api/user/change-password`,
+  },
+
+  // 计费与充值
+  billing: {
+    balance: `${API_BASE_URL}/api/billing/balance`,
+    recharge: `${API_BASE_URL}/api/billing/recharge`,
+  },
+
+  // 订阅
+  subscription: {
+    status: `${API_BASE_URL}/api/subscription/status`,
+    history: `${API_BASE_URL}/api/subscription/history`,
+  },
 } as const
 
 // 导出基础 URL（用于需要动态构建 URL 的场景）

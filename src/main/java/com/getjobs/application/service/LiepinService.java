@@ -59,14 +59,24 @@ public class LiepinService {
                 " hr_title          VARCHAR(100)," +
                 " hr_im_id          VARCHAR(64)," +
                 " delivered         INTEGER DEFAULT 0," +
-                " create_time       DATETIME," +
-                " update_time       DATETIME" +
+                " created_at        DATETIME," +
+                " updated_at        DATETIME" +
                 ")";
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(createSql);
             // 兼容旧库：尝试添加 delivered 列（如已存在则忽略错误）
             try {
                 stmt.execute("ALTER TABLE liepin_data ADD COLUMN delivered INTEGER DEFAULT 0");
+            } catch (Exception ignored) {}
+            // 兼容旧库：尝试添加 created_at 列
+            try {
+                stmt.execute("ALTER TABLE liepin_data ADD COLUMN created_at DATETIME");
+                log.info("已添加 created_at 字段");
+            } catch (Exception ignored) {}
+            // 兼容旧库：尝试添加 updated_at 列
+            try {
+                stmt.execute("ALTER TABLE liepin_data ADD COLUMN updated_at DATETIME");
+                log.info("已添加 updated_at 字段");
             } catch (Exception ignored) {}
             // 兼容旧库：尝试移除无数据列（SQLite 3.35+ 支持；不支持则忽略错误）
             try { stmt.execute("ALTER TABLE liepin_data DROP COLUMN job_function"); } catch (Exception ignored) {}
@@ -90,14 +100,14 @@ public class LiepinService {
             LiepinEntity existing = liepinMapper.selectById(entity.getJobId());
             LocalDateTime now = LocalDateTime.now();
             if (existing == null) {
-                entity.setCreateTime(now);
-                entity.setUpdateTime(now);
+                entity.setCreatedAt(now);
+                entity.setUpdatedAt(now);
                 if (entity.getDelivered() == null) entity.setDelivered(0);
                 liepinMapper.insert(entity);
             } else {
-                // 保留 create_time，更新其他字段与 update_time
-                entity.setCreateTime(existing.getCreateTime());
-                entity.setUpdateTime(now);
+                // 保留 created_at，更新其他字段与 updated_at
+                entity.setCreatedAt(existing.getCreatedAt());
+                entity.setUpdatedAt(now);
                 if (entity.getDelivered() == null) entity.setDelivered(existing.getDelivered());
                 liepinMapper.updateById(entity);
             }
@@ -117,8 +127,8 @@ public class LiepinService {
             LiepinEntity existing = liepinMapper.selectById(entity.getJobId());
             if (existing == null) {
                 LocalDateTime now = LocalDateTime.now();
-                entity.setCreateTime(now);
-                entity.setUpdateTime(now);
+                entity.setCreatedAt(now);
+                entity.setUpdatedAt(now);
                 if (entity.getDelivered() == null) entity.setDelivered(0);
                 liepinMapper.insert(entity);
             } else {
@@ -140,8 +150,8 @@ public class LiepinService {
                 LiepinEntity update = new LiepinEntity();
                 update.setJobId(jobId);
                 update.setDelivered(1);
-                update.setCreateTime(existing.getCreateTime());
-                update.setUpdateTime(LocalDateTime.now());
+                update.setCreatedAt(existing.getCreatedAt());
+                update.setUpdatedAt(LocalDateTime.now());
                 liepinMapper.updateById(update);
             }
         } catch (Exception e) {
@@ -181,8 +191,8 @@ public class LiepinService {
         for (LiepinEntity e : entities) {
             if (e == null || e.getJobId() == null) continue;
             if (existingIds.contains(e.getJobId())) continue;
-            if (e.getCreateTime() == null) e.setCreateTime(now);
-            e.setUpdateTime(now);
+            if (e.getCreatedAt() == null) e.setCreatedAt(now);
+            e.setUpdatedAt(now);
             if (e.getDelivered() == null) e.setDelivered(0);
             toInsert.add(e);
         }
@@ -192,7 +202,7 @@ public class LiepinService {
         String sql = "INSERT INTO liepin_data (" +
                 "job_id, job_title, job_link, job_salary_text, job_area, job_edu_req, job_exp_req, job_publish_time, " +
                 "comp_id, comp_name, comp_industry, comp_scale, " +
-                "hr_id, hr_name, hr_title, hr_im_id, delivered, create_time, update_time) " +
+                "hr_id, hr_name, hr_title, hr_im_id, delivered, created_at, updated_at) " +
                 "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
             conn.setAutoCommit(false);
@@ -231,10 +241,10 @@ public class LiepinService {
                 if (e.getHrImId() == null) ps.setNull(16, Types.VARCHAR); else ps.setString(16, e.getHrImId());
                 // 17 delivered
                 if (e.getDelivered() == null) ps.setNull(17, Types.INTEGER); else ps.setInt(17, e.getDelivered());
-                // 18 create_time
-                if (e.getCreateTime() == null) ps.setNull(18, Types.TIMESTAMP); else ps.setTimestamp(18, Timestamp.valueOf(e.getCreateTime()));
-                // 19 update_time
-                if (e.getUpdateTime() == null) ps.setNull(19, Types.TIMESTAMP); else ps.setTimestamp(19, Timestamp.valueOf(e.getUpdateTime()));
+                // 18 created_at
+                if (e.getCreatedAt() == null) ps.setNull(18, Types.TIMESTAMP); else ps.setTimestamp(18, Timestamp.valueOf(e.getCreatedAt()));
+                // 19 updated_at
+                if (e.getUpdatedAt() == null) ps.setNull(19, Types.TIMESTAMP); else ps.setTimestamp(19, Timestamp.valueOf(e.getUpdatedAt()));
 
                 ps.addBatch();
             }
@@ -556,7 +566,7 @@ public class LiepinService {
 
             Map<String, Long> byDay = filtered.stream()
                     .collect(Collectors.groupingBy(e -> {
-                        LocalDateTime t = e.getCreateTime();
+                        LocalDateTime t = e.getCreatedAt();
                         return t == null ? "未知" : String.format("%04d-%02d-%02d", t.getYear(), t.getMonthValue(), t.getDayOfMonth());
                     }, Collectors.counting()));
             byDay.entrySet().stream()

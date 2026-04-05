@@ -4,11 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.getjobs.application.entity.RechargeCodeEntity;
 import com.getjobs.application.entity.RechargeLogEntity;
+import com.getjobs.application.entity.SubscriptionEntity;
 import com.getjobs.application.entity.UserBalanceEntity;
 import com.getjobs.application.mapper.RechargeCodeMapper;
 import com.getjobs.application.mapper.RechargeLogMapper;
+import com.getjobs.application.mapper.SubscriptionMapper;
 import com.getjobs.application.mapper.UserBalanceMapper;
-import com.getjobs.application.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,21 +28,25 @@ import java.util.Map;
 public class RechargeCodeService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 排除易混淆字符
+    private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
     @Autowired
     private RechargeCodeMapper rechargeCodeMapper;
+
     @Autowired
     private RechargeLogMapper rechargeLogMapper;
-    @Autowired
-    private UserMapper userMapper;
+
     @Autowired
     private UserBalanceMapper userBalanceMapper;
+
+    @Autowired
+    private SubscriptionMapper subscriptionMapper;
 
     /**
      * 批量生成充值码
      */
     @Transactional
-    public Map<String, Object> generateCodes(int count, int amount, int bonus, String createdBy) {
+    public Map<String, Object> generateCodes(int count, String type, int applicationCount, int subscriptionDays, int bonus, String createdBy) {
         Map<String, Object> result = new HashMap<>();
         String batchNo = generateBatchNo();
         List<String> codes = new ArrayList<>();
@@ -50,10 +55,12 @@ public class RechargeCodeService {
             String code = generateUniqueCode();
             RechargeCodeEntity entity = new RechargeCodeEntity();
             entity.setCode(code);
-            entity.setAmount(amount);
+            entity.setType(type);
+            entity.setApplicationCount("count".equals(type) ? applicationCount : 0);
+            entity.setSubscriptionDays("subscription".equals(type) ? subscriptionDays : null);
             entity.setBonus(bonus);
-            entity.setTotalValue(amount + bonus);
-            entity.setStatus(0); // 0=未激活
+            entity.setTotalValue("count".equals(type) ? applicationCount + bonus : subscriptionDays + bonus);
+            entity.setStatus(0);
             entity.setBatchNo(batchNo);
             entity.setCreatedBy(createdBy);
             entity.setCreatedAt(LocalDateTime.now());
@@ -116,7 +123,7 @@ public class RechargeCodeService {
             throw new RuntimeException("充值码已冻结");
         }
 
-        entity.setStatus(2); // 2=冻结
+        entity.setStatus(2);
         return rechargeCodeMapper.updateById(entity) > 0;
     }
 
@@ -131,7 +138,7 @@ public class RechargeCodeService {
             throw new RuntimeException("已激活的充值码不能作废");
         }
 
-        entity.setStatus(3); // 3=作废
+        entity.setStatus(3);
         return rechargeCodeMapper.updateById(entity) > 0;
     }
 
@@ -172,7 +179,6 @@ public class RechargeCodeService {
     public Map<String, Object> activateCode(Long userId, String code) {
         Map<String, Object> result = new HashMap<>();
 
-        // 查询充值码
         RechargeCodeEntity rechargeCode = rechargeCodeMapper.selectByCode(code);
         if (rechargeCode == null) {
             throw new RuntimeException("充值码不存在");
@@ -187,71 +193,105 @@ public class RechargeCodeService {
             throw new RuntimeException("充值码已作废");
         }
 
-        // 查询用户余额
         UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
-        int balanceBefore = balance != null ? balance.getBalance() : 0;
+        LocalDateTime now = LocalDateTime.now();
 
-        // 更新余额
-        if (balance == null) {
-            balance = new UserBalanceEntity();
-            balance.setUserId(userId);
-            balance.setBalance(rechargeCode.getTotalValue());
-            balance.setTotalRecharge(rechargeCode.getTotalValue());
-            userBalanceMapper.insert(balance);
-        } else {
-            balance.setBalance(balance.getBalance() + rechargeCode.getTotalValue());
-            balance.setTotalRecharge(balance.getTotalRecharge() + rechargeCode.getTotalValue());
-            userBalanceMapper.updateById(balance);
+        if ("count".equals(rechargeCode.getType())) {
+            int balanceBefore = balance != null && balance.getApplicationCount() != null ? balance.getApplicationCount() : 0;
+            int totalCount = rechargeCode.getTotalValue();
+
+            if (balance == null) {
+                balance = new UserBalanceEntity();
+                balance.setUserId(userId);
+                balance.setApplicationCount(totalCount);
+                balance.setAiMatchCount(0);
+                balance.setAiGreetCount(0);
+                balance.setReportCount(0);
+                balance.setTotalRecharge(1);
+                balance.setTotalConsumption(0);
+                balance.setCreatedAt(now);
+                userBalanceMapper.insert(balance);
+            } else {
+                userBalanceMapper.updateApplicationCount(userId, balanceBefore + totalCount);
+                userBalanceMapper.updateTotalRecharge(userId, (balance.getTotalRecharge() != null ? balance.getTotalRecharge() : 0) + 1);
+            }
+
+            result.put("type", "count");
+            result.put("applicationCount", totalCount);
+            result.put("balanceAfter", balanceBefore + totalCount);
+        } else if ("subscription".equals(rechargeCode.getType())) {
+            int days = rechargeCode.getTotalValue();
+            LocalDateTime endDate = now.plusDays(days);
+
+            // 创建订阅记录
+            SubscriptionEntity subscription = new SubscriptionEntity();
+            subscription.setUserId(userId);
+            subscription.setType("custom");
+            subscription.setStartDate(now);
+            subscription.setEndDate(endDate);
+            subscription.setStatus(1);
+            subscription.setRechargeCodeId(rechargeCode.getId());
+            subscription.setCreatedAt(now);
+            subscriptionMapper.insert(subscription);
+
+            if (balance == null) {
+                balance = new UserBalanceEntity();
+                balance.setUserId(userId);
+                balance.setApplicationCount(0);
+                balance.setAiMatchCount(0);
+                balance.setAiGreetCount(0);
+                balance.setReportCount(0);
+                balance.setSubscriptionEndDate(endDate);
+                balance.setTotalRecharge(1);
+                balance.setTotalConsumption(0);
+                balance.setCreatedAt(now);
+                userBalanceMapper.insert(balance);
+            } else {
+                if (balance.getSubscriptionEndDate() == null || balance.getSubscriptionEndDate().isBefore(endDate)) {
+                    userBalanceMapper.updateSubscriptionEndDate(userId, endDate);
+                }
+                userBalanceMapper.updateTotalRecharge(userId, (balance.getTotalRecharge() != null ? balance.getTotalRecharge() : 0) + 1);
+            }
+
+            result.put("type", "subscription");
+            result.put("subscriptionDays", days);
+            result.put("endDate", endDate);
         }
 
-        // 更新充值码状态
         rechargeCode.setStatus(1);
         rechargeCode.setActivatedBy(userId);
         rechargeCode.setActivatedAt(LocalDateTime.now());
         rechargeCodeMapper.updateById(rechargeCode);
 
-        // 记录日志
-        RechargeLogEntity log = new RechargeLogEntity();
-        log.setUserId(userId);
-        log.setCode(code);
-        log.setAmount(rechargeCode.getAmount());
-        log.setBonus(rechargeCode.getBonus());
-        log.setBalanceBefore(balanceBefore);
-        log.setBalanceAfter(balanceBefore + rechargeCode.getTotalValue());
-        log.setCreatedAt(LocalDateTime.now());
-        rechargeLogMapper.insert(log);
+        RechargeLogEntity logEntity = new RechargeLogEntity();
+        logEntity.setUserId(userId);
+        logEntity.setCode(code);
+        logEntity.setAmount(rechargeCode.getTotalValue());
+        logEntity.setBonus(rechargeCode.getBonus());
+        logEntity.setBalanceBefore(0);
+        logEntity.setBalanceAfter(rechargeCode.getTotalValue());
+        logEntity.setCreatedAt(LocalDateTime.now());
+        rechargeLogMapper.insert(logEntity);
 
-        result.put("amount", rechargeCode.getAmount());
-        result.put("bonus", rechargeCode.getBonus());
-        result.put("totalValue", rechargeCode.getTotalValue());
-        result.put("balanceAfter", balanceBefore + rechargeCode.getTotalValue());
+        result.put("success", true);
+        result.put("message", "充值成功");
 
         return result;
     }
 
-    /**
-     * 生成唯一充值码 (GJ2025-XXXX-XXXX-XXXX 格式)
-     */
     private String generateUniqueCode() {
-        StringBuilder code = new StringBuilder("GJ2025-");
-        for (int i = 0; i < 12; i++) {
-            if (i > 0 && i % 4 == 0) {
-                code.append("-");
-            }
+        StringBuilder code = new StringBuilder("GJ-");
+        for (int i = 0; i < 16; i++) {
             code.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
 
-        // 检查是否已存在
         if (rechargeCodeMapper.selectByCode(code.toString()) != null) {
-            return generateUniqueCode(); // 递归重试
+            return generateUniqueCode();
         }
 
         return code.toString();
     }
 
-    /**
-     * 生成批次号
-     */
     private String generateBatchNo() {
         LocalDateTime now = LocalDateTime.now();
         return String.format("BATCH-%04d%02d%02d-%04d",

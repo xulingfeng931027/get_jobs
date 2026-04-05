@@ -12,9 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +24,6 @@ public class Job51Service {
     private final Job51ConfigMapper job51ConfigMapper;
     private final Job51OptionMapper job51OptionMapper;
     private final Job51Mapper job51Mapper;
-    private final DataSource dataSource;
 
     /** 获取第一条配置（通常只有一条） */
     public Job51ConfigEntity getFirstConfig() {
@@ -242,49 +238,26 @@ public class Job51Service {
             }
         }
 
-        java.util.List<Job51Entity> toInsert = new java.util.ArrayList<>();
+        List<Job51Entity> toInsert = new ArrayList<>();
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         String nowIso = now.toString();
         for (Job51Entity e : entities) {
             if (e == null || e.getJobId() == null) continue;
             if (existingIds.contains(e.getJobId())) continue;
-            if (e.getCreateTime() == null) e.setCreateTime(nowIso);
-            e.setUpdateTime(nowIso);
+            if (e.getCreatedAt() == null) e.setCreatedAt(LocalDateTime.parse(nowIso));
+            e.setUpdatedAt(LocalDateTime.parse(nowIso));
             if (e.getDelivered() == null) e.setDelivered(0);
             toInsert.add(e);
         }
         if (toInsert.isEmpty()) return;
 
-        String sql = "INSERT INTO job51_data (" +
-                "job_id, job_title, job_link, job_salary_text, job_area, job_edu_req, job_exp_req, job_publish_time, " +
-                "comp_id, comp_name, comp_industry, comp_scale, " +
-                "hr_id, hr_name, hr_title, delivered, create_time, update_time" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        try (Connection conn = dataSource.getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            for (Job51Entity e : toInsert) {
-                if (e.getJobId() == null) ps.setNull(1, java.sql.Types.BIGINT); else ps.setLong(1, e.getJobId());
-                if (e.getJobTitle() == null) ps.setNull(2, java.sql.Types.VARCHAR); else ps.setString(2, e.getJobTitle());
-                if (e.getJobLink() == null) ps.setNull(3, java.sql.Types.VARCHAR); else ps.setString(3, e.getJobLink());
-                if (e.getJobSalaryText() == null) ps.setNull(4, java.sql.Types.VARCHAR); else ps.setString(4, e.getJobSalaryText());
-                if (e.getJobArea() == null) ps.setNull(5, java.sql.Types.VARCHAR); else ps.setString(5, e.getJobArea());
-                if (e.getJobEduReq() == null) ps.setNull(6, java.sql.Types.VARCHAR); else ps.setString(6, e.getJobEduReq());
-                if (e.getJobExpReq() == null) ps.setNull(7, java.sql.Types.VARCHAR); else ps.setString(7, e.getJobExpReq());
-                if (e.getJobPublishTime() == null) ps.setNull(8, java.sql.Types.VARCHAR); else ps.setString(8, e.getJobPublishTime());
-                if (e.getCompId() == null) ps.setNull(9, java.sql.Types.BIGINT); else ps.setLong(9, e.getCompId());
-                if (e.getCompName() == null) ps.setNull(10, java.sql.Types.VARCHAR); else ps.setString(10, e.getCompName());
-                if (e.getCompIndustry() == null) ps.setNull(11, java.sql.Types.VARCHAR); else ps.setString(11, e.getCompIndustry());
-                if (e.getCompScale() == null) ps.setNull(12, java.sql.Types.VARCHAR); else ps.setString(12, e.getCompScale());
-                if (e.getHrId() == null) ps.setNull(13, java.sql.Types.VARCHAR); else ps.setString(13, e.getHrId());
-                if (e.getHrName() == null) ps.setNull(14, java.sql.Types.VARCHAR); else ps.setString(14, e.getHrName());
-                if (e.getHrTitle() == null) ps.setNull(15, java.sql.Types.VARCHAR); else ps.setString(15, e.getHrTitle());
-                if (e.getDelivered() == null) ps.setNull(16, java.sql.Types.INTEGER); else ps.setInt(16, e.getDelivered());
-                if (e.getCreateTime() == null) ps.setNull(17, java.sql.Types.VARCHAR); else ps.setString(17, e.getCreateTime());
-                if (e.getUpdateTime() == null) ps.setNull(18, java.sql.Types.VARCHAR); else ps.setString(18, e.getUpdateTime());
-                ps.addBatch();
+        // 使用 MyBatis-Plus 批量插入
+        try {
+            // 使用 insert 方法逐条插入（MyBatis-Plus 基础方式）
+            for (Job51Entity entity : toInsert) {
+                job51Mapper.insert(entity);
             }
-            ps.executeBatch();
-            conn.commit();
+            log.info("批量插入 51job 岗位快照成功，共插入 {} 条记录", toInsert.size());
         } catch (Exception e) {
             log.warn("批量插入 51job 岗位快照失败: {}", e.getMessage());
         }
@@ -386,47 +359,56 @@ public class Job51Service {
 
     // ==================== 投递状态写回 ====================
 
-    /** 将指定 jobId 标记为已投递 */
+    /**
+     * 将指定 jobId 标记为已投递
+     * @param jobId 职位ID
+     */
     public void markDelivered(Long jobId) {
         if (jobId == null) return;
-        try (Connection conn = dataSource.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(
-                     "UPDATE job51_data SET delivered=1, update_time=? WHERE job_id=?")) {
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
-            ps.setString(1, now.toString());
-            ps.setLong(2, jobId);
-            ps.executeUpdate();
+        try {
+            // 使用 MyBatis-Plus 的 UpdateWrapper 更新投递状态
+            Job51Entity updateEntity = new Job51Entity();
+            updateEntity.setDelivered(1);
+            updateEntity.setUpdatedAt(java.time.LocalDateTime.now());
+            
+            com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<Job51Entity> updateWrapper = 
+                    new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
+            updateWrapper.eq("job_id", jobId);
+            
+            job51Mapper.update(updateEntity, updateWrapper);
         } catch (Exception e) {
             log.warn("标记 51job 已投递失败 job_id={}: {}", jobId, e.getMessage());
         }
     }
 
-    /** 批量标记为已投递 */
+    /**
+     * 批量标记为已投递
+     * @param jobIds 职位ID集合
+     */
     public void markDeliveredBatch(java.util.Collection<Long> jobIds) {
         if (jobIds == null || jobIds.isEmpty()) return;
-        try (Connection conn = dataSource.getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(
-                     "UPDATE job51_data SET delivered=1, update_time=? WHERE job_id=?")) {
-            conn.setAutoCommit(false);
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        try {
+            // 过滤掉null值
+            java.util.List<Long> validIds = new java.util.ArrayList<>();
             for (Long id : jobIds) {
-                if (id == null) continue;
-                ps.setString(1, now.toString());
-                ps.setLong(2, id);
-                ps.addBatch();
+                if (id != null) validIds.add(id);
             }
-            int[] counts = ps.executeBatch();
-            conn.commit();
-            try {
-                int updated = 0;
-                if (counts != null) {
-                    for (int c : counts) {
-                        if (c > 0) updated += c;
-                    }
-                }
-                String sample = jobIds.stream().filter(java.util.Objects::nonNull).limit(5).map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
-                log.info("[51job] 批量标记已投递完成，入参 {} 条，成功更新 {} 条，示例ID: {}", jobIds.size(), updated, sample);
-            } catch (Exception ignored) {}
+            if (validIds.isEmpty()) return;
+            
+            // 使用 MyBatis-Plus 的 UpdateWrapper 批量更新
+            Job51Entity updateEntity = new Job51Entity();
+            updateEntity.setDelivered(1);
+            updateEntity.setUpdatedAt(java.time.LocalDateTime.now());
+            
+            com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<Job51Entity> updateWrapper = 
+                    new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
+            updateWrapper.in("job_id", validIds);
+            
+            int updated = job51Mapper.update(updateEntity, updateWrapper);
+            
+            // 记录示例ID用于日志
+            String sample = validIds.stream().limit(5).map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
+            log.info("[51job] 批量标记已投递完成，入参 {} 条，成功更新 {} 条，示例ID: {}", jobIds.size(), updated, sample);
         } catch (Exception e) {
             log.warn("批量标记 51job 已投递失败: {}", e.getMessage());
         }
@@ -571,9 +553,9 @@ public class Job51Service {
 
             java.util.Map<String, Long> byDay = filtered.stream()
                     .collect(java.util.stream.Collectors.groupingBy(e -> {
-                        String t = e.getCreateTime();
-                        if (t == null || t.length() < 10) return "未知";
-                        return t.substring(0,10);
+                        LocalDateTime t = e.getCreatedAt();
+                        if (t == null) return "未知";
+                        return t.toString().substring(0,10);
                     }, java.util.stream.Collectors.counting()));
             byDay.entrySet().stream().sorted(java.util.Map.Entry.comparingByKey()).forEach(en -> charts.dailyTrend.add(new NameValue(en.getKey(), en.getValue())));
 
@@ -668,7 +650,7 @@ public class Job51Service {
             r.deliveryStatus = (e.getDelivered()!=null && e.getDelivered()==1) ? "已投递" : "未投递";
             r.jobUrl = e.getJobLink();
             r.publishTime = e.getJobPublishTime();
-            r.createdAt = e.getCreateTime();
+            r.createdAt = e.getCreatedAt() != null ? e.getCreatedAt().toString() : null;
             r.industry = e.getCompIndustry();
             r.companyScale = e.getCompScale();
             rows.add(r);
@@ -718,35 +700,22 @@ public class Job51Service {
 
     private String nullSafe(String s) { return (s == null || s.isEmpty()) ? "未知" : s; }
 
-    /** 刷新 51job 数据：执行 VACUUM 并返回当前总数 */
+    /**
+     * 刷新 51job 数据：返回当前总数
+     * @return 刷新结果，包含成功状态、消息和总数
+     */
     public java.util.Map<String, Object> reloadJob51Data() {
         java.util.Map<String, Object> resp = new java.util.HashMap<>();
-        Connection conn = null;
         try {
-            conn = dataSource.getConnection();
-            try (Statement st = conn.createStatement()) {
-                String dbProduct = conn.getMetaData().getDatabaseProductName();
-                if (dbProduct != null && dbProduct.toLowerCase().contains("mysql")) {
-                    // MySQL 不需要 PRAGMA/VACUUM
-                } else {
-                    try { st.execute("PRAGMA wal_checkpoint(TRUNCATE)"); } catch (Exception ignore) {}
-                    try { st.execute("VACUUM"); } catch (Exception ignore) {}
-                }
-            }
-            long total = scalarCount(conn, "SELECT COUNT(*) FROM job51_data");
+            // 使用 MyBatis-Plus 查询总数
+            long total = job51Mapper.selectCount(null);
             resp.put("success", true);
             resp.put("message", "刷新完成");
             resp.put("total", total);
         } catch (Exception e) {
             resp.put("success", false);
             resp.put("message", "刷新失败: " + e.getMessage());
-        } finally { try { if (conn != null) conn.close(); } catch (Exception ignore) {} }
-        return resp;
-    }
-
-    private long scalarCount(Connection conn, String sql) throws Exception {
-        try (java.sql.Statement st = conn.createStatement(); java.sql.ResultSet rs = st.executeQuery(sql)) {
-            return rs.next() ? rs.getLong(1) : 0L;
         }
+        return resp;
     }
 }

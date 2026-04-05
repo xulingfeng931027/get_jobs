@@ -66,7 +66,7 @@ public class AdminUserService {
             map.put("createdAt", user.getCreatedAt());
 
             UserBalanceEntity balance = userBalanceMapper.selectByUserId(user.getId());
-            map.put("balance", balance != null ? balance.getBalance() : 0);
+            map.put("balance", balance != null ? balance.getApplicationCount() : 0);
             map.put("totalRecharge", balance != null ? balance.getTotalRecharge() : 0);
             map.put("totalConsumption", balance != null ? balance.getTotalConsumption() : 0);
 
@@ -103,7 +103,7 @@ public class AdminUserService {
 
         UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
         if (balance != null) {
-            result.put("balance", balance.getBalance());
+            result.put("balance", balance.getApplicationCount());
             result.put("totalRecharge", balance.getTotalRecharge());
             result.put("totalConsumption", balance.getTotalConsumption());
         } else {

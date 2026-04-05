@@ -140,6 +140,7 @@ export default function LiepinPage() {
       const data = await response.json()
 
       console.log('Fetched liepin data:', data)
+      console.log('City options:', data.options?.city)
 
       if (data.config) {
         const normalized = { ...data.config }
@@ -152,6 +153,7 @@ export default function LiepinPage() {
         }
       }
       if (data.options) {
+        console.log('Setting options:', data.options)
         setOptions(data.options)
       }
     } catch (error) {
@@ -363,48 +365,34 @@ export default function LiepinPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="city">工作城市</Label>
-                  <div className="flex items-center gap-2">
-                    <CommonOptionSelector
-                      type="city"
-                      mode="single"
-                      currentValues={config.city ? [config.city] : []}
-                      onSelect={(values) => {
-                        if (values.length > 0) {
-                          // 猎聘直接使用城市名称
-                          setConfig({ ...config, city: values[0] })
-                          setIsCustomCity(false)
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomCity(!isCustomCity)
-                        if (!isCustomCity) {
-                          // 切换到手动输入时，清空当前值
-                          setConfig({ ...config, city: '' })
-                        }
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      {isCustomCity ? '从列表选择' : '手动输入'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCity(!isCustomCity)
+                      if (!isCustomCity) {
+                        // 切换到手动输入时，清空当前值
+                        setConfig({ ...config, city: '' })
+                      }
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {isCustomCity ? '从列表选择' : '手动输入'}
+                  </button>
                 </div>
                 {isCustomCity ? (
                   <Input
                     id="city"
                     value={config.city || ''}
                     onChange={(e) => setConfig({ ...config, city: e.target.value })}
-                    placeholder="请输入城市码，例如：410"
+                    placeholder="请输入城市码,例如:410"
                   />
                 ) : (
                   <Select
                     id="city"
                     value={config.city || ''}
                     onChange={(e) => setConfig({ ...config, city: e.target.value })}
+                    placeholder="请选择城市"
                   >
-                    <option value="">请选择城市</option>
                     {options.city.map((city) => (
                       <option key={city.id} value={city.name}>
                         {city.name}

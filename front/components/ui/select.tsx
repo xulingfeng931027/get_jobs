@@ -30,7 +30,12 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
 
     const options = React.useMemo<OptionItem[]>(() => {
       return React.Children.toArray(children)
-        .filter((c) => React.isValidElement(c) && (c as any).type === 'option')
+        .filter((c) => {
+          if (!React.isValidElement(c)) return false
+          const elementType = (c as any).type
+          // 支持字符串 'option' 和 React 组件
+          return elementType === 'option' || (typeof elementType === 'function' && elementType.name === 'option')
+        })
         .map((c: any) => ({ value: String(c.props.value ?? c.props.children), label: c.props.children }))
     }, [children])
 
@@ -125,34 +130,40 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
               ref={dropdownRef}
               className="dropdown-panel"
               style={{
+                position: 'fixed',
                 top: `${dropdownPosition.top}px`,
                 left: `${dropdownPosition.left}px`,
                 width: `${dropdownPosition.width}px`,
+                zIndex: 9999,
+                maxHeight: '300px',
+                overflowY: 'auto',
               }}
             >
-              <ul className="py-1">
-                {options.map((o) => {
-                  const active = String(value ?? '') === String(o.value)
-                  return (
-                    <li
-                      key={String(o.value)}
-                      className={cn(
-                        "group flex items-center justify-between gap-3 px-3 py-2 cursor-pointer transition-all border-b border-white/12 last:border-b-0",
-                        active ? "bg-gradient-to-r from-emerald-500/12 to-cyan-500/12" : "hover:bg-white/12"
-                      )}
-                      onClick={() => {
-                        emitChange(String(o.value))
-                        setOpen(false)
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-md border border-white/30 bg-white/10 shadow-inner transition-all", active && "bg-emerald-400/60 border-emerald-300/80")}></span>
-                        <span className="text-sm truncate">{o.label}</span>
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
+              <div className="rounded-xl border border-white/20 bg-[#1a1a1a]/95 backdrop-blur-xl shadow-2xl">
+                <ul className="py-1">
+                  {options.map((o) => {
+                    const active = String(value ?? '') === String(o.value)
+                    return (
+                      <li
+                        key={String(o.value)}
+                        className={cn(
+                          "group flex items-center justify-between gap-3 px-3 py-2 cursor-pointer transition-all border-b border-white/12 last:border-b-0",
+                          active ? "bg-gradient-to-r from-emerald-500/12 to-cyan-500/12" : "hover:bg-white/12"
+                        )}
+                        onClick={() => {
+                          emitChange(String(o.value))
+                          setOpen(false)
+                        }}
+                      >
+                        <span className="flex items-center gap-3">
+                          <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-md border border-white/30 bg-white/10 shadow-inner transition-all", active && "bg-emerald-400/60 border-emerald-300/80")}></span>
+                          <span className="text-sm truncate">{o.label}</span>
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             </div>,
             document.body
           )}

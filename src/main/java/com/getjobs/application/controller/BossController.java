@@ -1,6 +1,7 @@
 package com.getjobs.application.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.CookieService;
 import com.getjobs.worker.dto.JobProgressMessage;
 import com.getjobs.worker.manager.PlaywrightManager;
@@ -36,6 +37,7 @@ public class BossController {
     private final BossJobService bossJobService;
     private final PlaywrightManager playwrightManager;
     private final CookieService cookieService;
+    private final BillingService billingService;
 
     private final List<SseEmitter> bossProgressEmitters = new CopyOnWriteArrayList<>();
 
@@ -86,9 +88,20 @@ public class BossController {
 
     /** POST - 启动Boss投递任务（前端使用的接口）*/
     @PostMapping("/start")
-    public ResponseEntity<Map<String, Object>> startBoss() {
+    public ResponseEntity<Map<String, Object>> startBoss(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 计费检查
+            if (userId != null) {
+                Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) billingCheck.get("allowed")) {
+                    response.put("success", false);
+                    response.put("message", billingCheck.get("reason"));
+                    response.put("billingInfo", billingCheck);
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             if (!playwrightManager.isLoggedIn("boss")) {
                 response.put("success", false);
                 response.put("message", "请先登录Boss直聘");
@@ -101,10 +114,25 @@ public class BossController {
                 response.put("status", "running");
                 return ResponseEntity.badRequest().body(response);
             }
-            CompletableFuture.runAsync(() -> bossJobService.executeDelivery(pm -> {
-                sendBossProgress(pm);
-                log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
-            }));
+            
+            // 启动投递任务，投递完成后扣费
+            final Long finalUserId = userId;
+            CompletableFuture.runAsync(() -> {
+                try {
+                    bossJobService.executeDelivery(pm -> {
+                        sendBossProgress(pm);
+                        log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
+                    });
+                    
+                    // 投递完成后扣费（按1次计算）
+                    if (finalUserId != null) {
+                        billingService.deductAfterDelivery(finalUserId, 1, "boss");
+                    }
+                } catch (Exception e) {
+                    log.error("Boss投递任务执行失败", e);
+                }
+            });
+            
             response.put("success", true);
             response.put("message", "Boss任务启动成功");
             response.put("status", "started");

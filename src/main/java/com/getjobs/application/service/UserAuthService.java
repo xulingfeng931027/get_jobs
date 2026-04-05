@@ -1,0 +1,310 @@
+package com.getjobs.application.service;
+
+import com.getjobs.application.entity.UserBalanceEntity;
+import com.getjobs.application.entity.UserEntity;
+import com.getjobs.application.mapper.UserBalanceMapper;
+import com.getjobs.application.mapper.UserMapper;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 用户认证服务
+ */
+@Slf4j
+@Service
+public class UserAuthService {
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private UserMapper userMapper;
+    @Autowired
+    private UserBalanceMapper userBalanceMapper;
+    @Value("${user.jwt.secret:GetJobs-User-Secret-Key-2026!@#$}")
+    private String jwtSecret;
+    @Value("${user.jwt.expiration:604800000}")
+    private long jwtExpiration;
+
+    /**
+     * 用户注册
+     *
+     * @param username 用户名
+     * @param email 邮箱
+     * @param phone 手机号
+     * @param password 密码
+     * @return 注册结果
+     */
+    @Transactional
+    public Map<String, Object> register(String username, String email, String phone, String password) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 检查用户名是否已存在
+        UserEntity existingUser = userMapper.selectByUsername(username);
+        if (existingUser != null) {
+            result.put("success", false);
+            result.put("message", "用户名已存在");
+            return result;
+        }
+
+        // 检查邮箱是否已存在
+        if (email != null && !email.isEmpty()) {
+            existingUser = userMapper.selectByEmail(email);
+            if (existingUser != null) {
+                result.put("success", false);
+                result.put("message", "邮箱已被注册");
+                return result;
+            }
+        }
+
+        // 检查手机号是否已存在
+        if (phone != null && !phone.isEmpty()) {
+            existingUser = userMapper.selectByPhone(phone);
+            if (existingUser != null) {
+                result.put("success", false);
+                result.put("message", "手机号已被注册");
+                return result;
+            }
+        }
+
+        // 创建用户
+        UserEntity user = new UserEntity();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setStatus(1);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.insert(user);
+
+        // 创建用户余额记录
+        UserBalanceEntity balance = new UserBalanceEntity();
+        balance.setUserId(user.getId());
+        balance.setApplicationCount(0);
+        balance.setAiMatchCount(0);
+        balance.setAiGreetCount(0);
+        balance.setReportCount(0);
+        balance.setTotalRecharge(0);
+        balance.setTotalConsumption(0);
+        balance.setCreatedAt(LocalDateTime.now());
+        balance.setUpdatedAt(LocalDateTime.now());
+        userBalanceMapper.insert(balance);
+
+        log.info("[用户注册] 新用户注册成功：{}", username);
+
+        result.put("success", true);
+        result.put("message", "注册成功");
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+
+        return result;
+    }
+
+    /**
+     * 用户登录
+     *
+     * @param username 用户名/邮箱/手机号
+     * @param password 密码
+     * @return 登录结果
+     */
+    public Map<String, Object> login(String username, String password) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 查询用户（支持用户名、邮箱、手机号登录）
+        UserEntity user = userMapper.selectByUsername(username);
+        if (user == null) {
+            user = userMapper.selectByEmail(username);
+        }
+        if (user == null) {
+            user = userMapper.selectByPhone(username);
+        }
+
+        if (user == null) {
+            result.put("success", false);
+            result.put("message", "用户不存在");
+            return result;
+        }
+
+        // 验证密码
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            result.put("success", false);
+            result.put("message", "密码错误");
+            return result;
+        }
+
+        // 检查用户状态
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            result.put("success", false);
+            result.put("message", "账户已被禁用，请联系管理员");
+            return result;
+        }
+
+        // 生成 JWT Token
+        String token = generateToken(user.getId(), user.getUsername());
+
+        log.info("[用户登录] 用户{}登录成功", username);
+
+        result.put("success", true);
+        result.put("message", "登录成功");
+        result.put("token", token);
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+
+        return result;
+    }
+
+    /**
+     * 生成 JWT Token
+     */
+    private String generateToken(Long userId, String username) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("username", username)
+                .issuer("get-jobs-user")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * 验证 JWT Token
+     *
+     * @param token JWT Token
+     * @return 用户信息
+     */
+    public Map<String, Object> validateToken(String token) {
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            var claims = Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            Long userId = Long.parseLong(claims.getSubject());
+            String username = claims.get("username", String.class);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("valid", true);
+            result.put("userId", userId);
+            result.put("username", username);
+
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("valid", false);
+            result.put("message", "Token 无效或已过期");
+            return result;
+        }
+    }
+
+    /**
+     * 获取用户信息
+     *
+     * @param userId 用户ID
+     * @return 用户信息
+     */
+    public Map<String, Object> getUserProfile(Long userId) {
+        UserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("phone", user.getPhone());
+        result.put("status", user.getStatus());
+        result.put("createdAt", user.getCreatedAt());
+
+        return result;
+    }
+
+    /**
+     * 更新用户信息
+     *
+     * @param userId 用户ID
+     * @param email 邮箱
+     * @param phone 手机号
+     * @return 更新结果
+     */
+    @Transactional
+    public Map<String, Object> updateUserProfile(Long userId, String email, String phone) {
+        UserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "用户不存在");
+            return result;
+        }
+
+        if (email != null) {
+            user.setEmail(email);
+        }
+        if (phone != null) {
+            user.setPhone(phone);
+        }
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "更新成功");
+
+        return result;
+    }
+
+    /**
+     * 修改密码
+     *
+     * @param userId 用户ID
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     * @return 修改结果
+     */
+    @Transactional
+    public Map<String, Object> changePassword(Long userId, String oldPassword, String newPassword) {
+        UserEntity user = userMapper.selectById(userId);
+        if (user == null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "用户不存在");
+            return result;
+        }
+
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "旧密码错误");
+            return result;
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.updateById(user);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "密码修改成功");
+
+        return result;
+    }
+}

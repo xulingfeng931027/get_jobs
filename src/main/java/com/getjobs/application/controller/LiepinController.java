@@ -3,6 +3,7 @@ package com.getjobs.application.controller;
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.entity.LiepinConfigEntity;
 import com.getjobs.application.entity.LiepinOptionEntity;
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.CookieService;
 import com.getjobs.application.service.LiepinService;
 import com.getjobs.worker.manager.PlaywrightManager;
@@ -40,6 +41,9 @@ public class LiepinController {
     @Autowired
     private LiepinService liepinService;
 
+    @Autowired
+    private BillingService billingService;
+
     /**
      * 检查登录状态
      * @return 登录状态信息
@@ -68,10 +72,21 @@ public class LiepinController {
      * @return 响应结果
      */
     @PostMapping("/start")
-    public ResponseEntity<Map<String, Object>> startLiepinJob() {
+    public ResponseEntity<Map<String, Object>> startLiepinJob(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 计费检查
+            if (userId != null) {
+                Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) billingCheck.get("allowed")) {
+                    response.put("success", false);
+                    response.put("message", billingCheck.get("reason"));
+                    response.put("billingInfo", billingCheck);
+                    return ResponseEntity.badRequest().body(response);
+                }
+            }
+
             // 未登录则不允许启动
             if (!playwrightManager.isLoggedIn("liepin")) {
                 response.put("success", false);
@@ -88,11 +103,21 @@ public class LiepinController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // 异步启动新任务
+            // 异步启动新任务，投递完成后扣费
+            final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
-                liepinJobService.executeDelivery(progressMessage -> {
-                    log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
-                });
+                try {
+                    liepinJobService.executeDelivery(progressMessage -> {
+                        log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
+                    });
+                    
+                    // 投递完成后扣费（按1次计算）
+                    if (finalUserId != null) {
+                        billingService.deductAfterDelivery(finalUserId, 1, "liepin");
+                    }
+                } catch (Exception e) {
+                    log.error("猎聘投递任务执行失败", e);
+                }
             });
 
             response.put("success", true);

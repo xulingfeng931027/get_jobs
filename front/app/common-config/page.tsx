@@ -1,7 +1,7 @@
 'use client'
 
 import {useEffect, useState} from 'react'
-import {BiCog, BiEdit, BiMap, BiMoney, BiPlus, BiSearch, BiX} from 'react-icons/bi'
+import {BiCog, BiEdit, BiMoney, BiPlus, BiSearch, BiX} from 'react-icons/bi'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
 import {Input} from '@/components/ui/input'
@@ -24,14 +24,12 @@ export default function CommonConfigPage() {
 
   // 输入状态
   const [keywordInput, setKeywordInput] = useState('')
-  const [cityInput, setCityInput] = useState('')
   const [salaryMin, setSalaryMin] = useState('')
   const [salaryMax, setSalaryMax] = useState('')
   const [blacklistInput, setBlacklistInput] = useState('')
 
   // 错误提示
   const [keywordError, setKeywordError] = useState('')
-  const [cityError, setCityError] = useState('')
   const [salaryError, setSalaryError] = useState('')
   const [blacklistError, setBlacklistError] = useState('')
 
@@ -66,7 +64,6 @@ export default function CommonConfigPage() {
 
   // 按类型分组选项
   const keywordOptions = options.filter(o => o.type === 'keyword')
-  const cityOptions = options.filter(o => o.type === 'city')
   const salaryOptions = options.filter(o => o.type === 'salary_range')
   const blacklistOptions = options.filter(o => o.type === 'blacklist')
 
@@ -112,46 +109,6 @@ export default function CommonConfigPage() {
     } catch (error) {
       console.error('添加关键词失败:', error)
       setKeywordError('网络错误，请检查后端服务')
-    }
-  }
-
-  // 添加城市
-  const handleAddCity = async () => {
-    const city = cityInput.trim()
-    if (!city) {
-      setCityError('请输入城市名称')
-      return
-    }
-
-    if (isDuplicate('city', city)) {
-      setCityError('该城市已存在')
-      return
-    }
-
-    try {
-      const response = await fetch(API_PATHS.commonOption, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'city',
-          label: city,
-          value: city,
-          sortOrder: cityOptions.length,
-        }),
-      })
-
-      if (response.ok) {
-        setCityInput('')
-        setCityError('')
-        await fetchOptions()
-      } else {
-        const errorText = await response.text()
-        console.error('添加城市失败:', response.status, errorText)
-        setCityError(`添加失败: ${response.status}`)
-      }
-    } catch (error) {
-      console.error('添加城市失败:', error)
-      setCityError('网络错误，请检查后端服务')
     }
   }
 
@@ -306,13 +263,6 @@ export default function CommonConfigPage() {
     if (e.key === 'Enter') {
       e.preventDefault()
       handleAddKeyword()
-    }
-  }
-
-  const handleCityKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddCity()
     }
   }
 
@@ -486,110 +436,6 @@ export default function CommonConfigPage() {
                 )}
               </div>
               {editError && editingId && keywordOptions.some(o => o.id === editingId) && (
-                <p className="text-xs text-red-500">{editError}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 工作城市区域 */}
-        <Card className="animate-in fade-in slide-in-from-bottom-6 duration-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BiMap className="text-primary" />
-              工作城市
-            </CardTitle>
-            <CardDescription>配置目标工作城市选项池，可在平台配置中快速选择</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* 输入区域 */}
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    value={cityInput}
-                    onChange={(e) => {
-                      setCityInput(e.target.value)
-                      setCityError('')
-                    }}
-                    onKeyDown={handleCityKeyDown}
-                    placeholder="输入城市名称，如：北京"
-                  />
-                </div>
-                <Button
-                  onClick={handleAddCity}
-                  className="rounded-full bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white px-4"
-                >
-                  <BiPlus className="mr-1" /> 添加
-                </Button>
-              </div>
-              {cityError && (
-                <p className="text-xs text-red-500">{cityError}</p>
-              )}
-
-              {/* 标签列表 */}
-              <div className="flex flex-wrap gap-2">
-                {cityOptions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">暂无城市，请添加</p>
-                ) : (
-                  cityOptions.map((option) => (
-                    <span
-                      key={option.id}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-teal-500/10 to-green-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300"
-                    >
-                      {editingId === option.id ? (
-                        <div className="flex items-center gap-1">
-                          <Input
-                            value={editValue}
-                            onChange={(e) => {
-                              setEditValue(e.target.value)
-                              setEditError('')
-                            }}
-                            onKeyDown={(e) => handleEditKeyDown(e, option)}
-                            className="h-6 w-32 px-2 py-0 text-sm"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => saveEdit(option)}
-                            className="p-0.5 rounded-full hover:bg-teal-500/20 transition-colors"
-                            title="保存"
-                          >
-                            <BiPlus className="text-base" />
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="p-0.5 rounded-full hover:bg-teal-500/20 transition-colors"
-                            title="取消"
-                          >
-                            <BiX className="text-base" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <span className="cursor-pointer" onClick={() => startEdit(option)}>
-                            {option.label}
-                          </span>
-                          <button
-                            onClick={() => startEdit(option)}
-                            className="p-0.5 rounded-full hover:bg-teal-500/20 transition-colors"
-                            title="编辑"
-                          >
-                            <BiEdit className="text-sm" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(option.id)}
-                            className="p-0.5 rounded-full hover:bg-teal-500/20 transition-colors"
-                            title="删除"
-                          >
-                            <BiX className="text-base" />
-                          </button>
-                        </>
-                      )}
-                    </span>
-                  ))
-                )}
-              </div>
-              {editError && editingId && cityOptions.some(o => o.id === editingId) && (
                 <p className="text-xs text-red-500">{editError}</p>
               )}
             </div>

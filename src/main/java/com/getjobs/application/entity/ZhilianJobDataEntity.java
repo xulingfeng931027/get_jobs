@@ -44,9 +44,9 @@ public class ZhilianJobDataEntity {
     @TableField("delivery_status")
     private String deliveryStatus; // 未投递 / 已投递 / 已过滤 / 投递失败
 
-    @TableField("create_time")
-    private LocalDateTime createTime;
+    @TableField("created_at")
+    private LocalDateTime createdAt;
 
-    @TableField("update_time")
-    private LocalDateTime updateTime;
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

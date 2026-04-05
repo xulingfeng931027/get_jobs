@@ -495,38 +495,16 @@ export default function Job51Page() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>城市区域</Label>
-                      <div className="flex items-center gap-2">
-                        <CommonOptionSelector
-                          type="city"
-                          mode="single"
-                          currentValues={config.jobArea ? [options.jobArea.find(c => c.code === config.jobArea)?.name || ''].filter(Boolean) : []}
-                          onSelect={(values) => {
-                            if (values.length > 0) {
-                              const cityName = values[0]
-                              // 从城市选项中查找对应的 code
-                              const cityOption = options.jobArea.find(c => c.name === cityName)
-                              if (cityOption) {
-                                setConfig((c) => ({ ...c, jobArea: cityOption.code }))
-                                setIsCustomArea(false)
-                              } else {
-                                // 如果找不到对应 code，直接用名称
-                                setConfig((c) => ({ ...c, jobArea: cityName }))
-                                setIsCustomArea(true)
-                              }
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsCustomArea(!isCustomArea)
-                            if (!isCustomArea) setConfig((c) => ({ ...c, jobArea: '' }))
-                          }}
-                          className="text-xs text-primary hover:underline"
-                        >
-                          {isCustomArea ? '从列表选择' : '手动输入'}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomArea(!isCustomArea)
+                          if (!isCustomArea) setConfig((c) => ({ ...c, jobArea: '' }))
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {isCustomArea ? '从列表选择' : '手动输入'}
+                      </button>
                     </div>
                     {isCustomArea ? (
                       <Input
