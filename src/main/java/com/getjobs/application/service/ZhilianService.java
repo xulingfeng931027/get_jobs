@@ -2,25 +2,22 @@ package com.getjobs.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.getjobs.application.entity.ZhilianConfigEntity;
-import com.getjobs.application.entity.ZhilianOptionEntity;
 import com.getjobs.application.entity.ZhilianJobDataEntity;
+import com.getjobs.application.entity.ZhilianOptionEntity;
 import com.getjobs.application.mapper.ZhilianConfigMapper;
-import com.getjobs.application.mapper.ZhilianOptionMapper;
 import com.getjobs.application.mapper.ZhilianJobDataMapper;
+import com.getjobs.application.mapper.ZhilianOptionMapper;
 import com.getjobs.worker.zhilian.ZhilianConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import jakarta.annotation.PostConstruct;
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -178,31 +175,6 @@ public class ZhilianService {
         return e == null ? null : e.getName();
     }
 
-    // ==================== 数据表初始化与数据操作 ====================
-
-    @PostConstruct
-    public void ensureZhilianDataTableExists() {
-        String createSql = "CREATE TABLE IF NOT EXISTS zhilian_data (" +
-                " id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                " job_id VARCHAR(64)," +
-                " job_title VARCHAR(200)," +
-                " job_link VARCHAR(300)," +
-                " salary VARCHAR(100)," +
-                " location VARCHAR(100)," +
-                " experience VARCHAR(100)," +
-                " degree VARCHAR(100)," +
-                " company_name VARCHAR(200)," +
-                " delivery_status VARCHAR(20) DEFAULT '未投递'," +
-                " create_time DATETIME," +
-                " update_time DATETIME" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-            log.info("确保 zhilian_data 表已存在");
-        } catch (Exception e) {
-            log.warn("创建 zhilian_data 表失败: {}", e.getMessage());
-        }
-    }
 
     public boolean existsByJobId(String jobId) {
         if (jobId == null || jobId.trim().isEmpty()) return false;

@@ -59,3 +59,4 @@ dist/
 # Gradle cache
 .gradle/
 /out/
+/front-admin/node_modules/

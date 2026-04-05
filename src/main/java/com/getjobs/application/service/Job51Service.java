@@ -8,7 +8,6 @@ import com.getjobs.application.mapper.Job51ConfigMapper;
 import com.getjobs.application.mapper.Job51Mapper;
 import com.getjobs.application.mapper.Job51OptionMapper;
 import com.getjobs.worker.job51.Job51Config;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -160,32 +159,6 @@ public class Job51Service {
         return v;
     }
 
-    // ==================== 表初始化与数据导入 ====================
-
-    @PostConstruct
-    public void ensureJob51OptionTableAndData() {
-        // 仅确保表存在；城市选项完全由数据库维护
-        ensureJob51OptionTable();
-        ensureJob51DataTable();
-    }
-
-    private void ensureJob51OptionTable() {
-        String createSql = "CREATE TABLE IF NOT EXISTS job51_option (" +
-                " id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                " type VARCHAR(50)," +
-                " name VARCHAR(100)," +
-                " code VARCHAR(100)," +
-                " sort_order INTEGER," +
-                " created_at DATETIME," +
-                " updated_at DATETIME" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-        } catch (Exception e) {
-            log.warn("创建 job51_option 表失败: {}", e.getMessage());
-        }
-    }
-
     // 初始化逻辑移除：数据由外部迁移并在数据库维护，无需自动填充
 
     private void insertOption(String type, String name, String code, int sortOrder, LocalDateTime now) {
@@ -246,41 +219,7 @@ public class Job51Service {
         }
     }
 
-    // ==================== 51job 岗位数据表与持久化 ====================
 
-    /** 创建 job51_data 表（如不存在） */
-    private void ensureJob51DataTable() {
-        String createSql = "CREATE TABLE IF NOT EXISTS job51_data (" +
-                " job_id            BIGINT PRIMARY KEY," +
-                " job_title         VARCHAR(200)," +
-                " job_link          VARCHAR(300)," +
-                " job_salary_text   VARCHAR(100)," +
-                " job_area          VARCHAR(100)," +
-                " job_edu_req       VARCHAR(50)," +
-                " job_exp_req       VARCHAR(50)," +
-                " job_publish_time  VARCHAR(50)," +
-                " comp_id           BIGINT," +
-                " comp_name         VARCHAR(200)," +
-                " comp_industry     VARCHAR(100)," +
-                " comp_scale        VARCHAR(50)," +
-                " hr_id             VARCHAR(64)," +
-                " hr_name           VARCHAR(50)," +
-                " hr_title          VARCHAR(100)," +
-                " delivered         INTEGER DEFAULT 0," +
-                " create_time       TEXT," +
-                " update_time       TEXT" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-            // 兼容旧库：添加 delivered 列（已存在则忽略）
-            try { stmt.execute("ALTER TABLE job51_data ADD COLUMN delivered INTEGER DEFAULT 0"); } catch (Exception ignored) {}
-            // 兼容旧库：尝试移除 account_id（已不存在或不支持则忽略）
-            try { stmt.execute("ALTER TABLE job51_data DROP COLUMN account_id"); } catch (Exception ignored) {}
-            log.info("确保 job51_data 表已存在");
-        } catch (Exception e) {
-            log.warn("创建 job51_data 表失败: {}", e.getMessage());
-        }
-    }
 
     /** 批量插入（仅不存在时），默认 delivered=0 */
     public void batchInsertIfNotExists(List<Job51Entity> entities) {
@@ -786,8 +725,13 @@ public class Job51Service {
         try {
             conn = dataSource.getConnection();
             try (Statement st = conn.createStatement()) {
-                try { st.execute("PRAGMA wal_checkpoint(TRUNCATE)"); } catch (Exception ignore) {}
-                try { st.execute("VACUUM"); } catch (Exception ignore) {}
+                String dbProduct = conn.getMetaData().getDatabaseProductName();
+                if (dbProduct != null && dbProduct.toLowerCase().contains("mysql")) {
+                    // MySQL 不需要 PRAGMA/VACUUM
+                } else {
+                    try { st.execute("PRAGMA wal_checkpoint(TRUNCATE)"); } catch (Exception ignore) {}
+                    try { st.execute("VACUUM"); } catch (Exception ignore) {}
+                }
             }
             long total = scalarCount(conn, "SELECT COUNT(*) FROM job51_data");
             resp.put("success", true);

@@ -35,14 +35,14 @@ public class ZhilianOptionInitializer implements CommandLineRunner {
 
     private void ensureTableExists() {
         String ddl = "CREATE TABLE IF NOT EXISTS zhilian_option (" +
-                " id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                " id BIGINT AUTO_INCREMENT PRIMARY KEY," +
                 " type VARCHAR(50)," +
                 " name VARCHAR(100)," +
                 " code VARCHAR(100)," +
-                " sort_order INTEGER," +
-                " created_at DATETIME," +
-                " updated_at DATETIME" +
-                ")";
+                " sort_order INT," +
+                " created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                " updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(ddl);
             log.info("确保 zhilian_option 表已存在");

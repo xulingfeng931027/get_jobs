@@ -12,14 +12,20 @@ spring:
     charset: UTF-8
     location: classpath:banner.txt
   datasource:
-    url: jdbc:sqlite:./db/getjobs.db
-    driver-class-name: org.sqlite.JDBC
+    url: jdbc:mysql://43.143.182.159:6033/get_jobs?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: app_user
+    password: 7hxUKgrA7x6D!FZwHLFz
     hikari:
-      maximum-pool-size: 5
+      maximum-pool-size: 10
       connection-test-query: SELECT 1
+      idle-timeout: 600000
+      max-lifetime: 1800000
   sql:
     init:
-      mode: never  # 数据库文件已存在，不需要自动初始化
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: true
   output:
     ansi:
       enabled: always
@@ -49,3 +55,10 @@ mybatis-plus:
     db-config:
       id-type: auto
   mapper-locations: classpath*:/mapper/**/*.xml
+
+# 后台管理系统 JWT 配置
+admin:
+  jwt:
+    secret: ${ADMIN_JWT_SECRET:G3tJ0bs-Adm1n-Secr3t-K3y-2025!@#}
+    expiration: 86400000  # 24小时（毫秒）
+    issuer: get-jobs-admin

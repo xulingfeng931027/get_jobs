@@ -3,13 +3,10 @@ package com.getjobs.application.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.getjobs.application.entity.SearchPresetEntity;
 import com.getjobs.application.mapper.SearchPresetMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -27,23 +24,6 @@ public class SearchPresetController {
         this.dataSource = dataSource;
     }
 
-    @PostConstruct
-    public void ensureTableExists() {
-        String createSql = "CREATE TABLE IF NOT EXISTS search_preset (" +
-                " id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                " name VARCHAR(200)," +
-                " keywords TEXT," +
-                " city VARCHAR(100)," +
-                " created_at DATETIME," +
-                " updated_at DATETIME" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-            log.info("确保 search_preset 表已存在");
-        } catch (Exception e) {
-            log.warn("创建 search_preset 表失败: {}", e.getMessage());
-        }
-    }
 
     /**
      * 获取所有预设列表（按 updatedAt 倒序）

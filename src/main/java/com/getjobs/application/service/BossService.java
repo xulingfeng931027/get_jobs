@@ -3,16 +3,8 @@ package com.getjobs.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.getjobs.application.entity.BlacklistEntity;
-import com.getjobs.application.entity.BossConfigEntity;
-import com.getjobs.application.entity.BossIndustryEntity;
-import com.getjobs.application.entity.BossOptionEntity;
-import com.getjobs.application.mapper.BlacklistMapper;
-import com.getjobs.application.mapper.BossJobDataMapper;
-import com.getjobs.application.entity.BossJobDataEntity;
-import com.getjobs.application.mapper.BossConfigMapper;
-import com.getjobs.application.mapper.BossIndustryMapper;
-import com.getjobs.application.mapper.BossOptionMapper;
+import com.getjobs.application.entity.*;
+import com.getjobs.application.mapper.*;
 import com.getjobs.worker.boss.BossConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,17 +13,11 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Boss数据服务
@@ -499,6 +485,9 @@ public class BossService {
         java.sql.Connection conn = null;
         try {
             conn = dataSource.getConnection();
+            // MySQL 不需要 SQLite 特有的迁移逻辑
+            String dbProduct = conn.getMetaData().getDatabaseProductName();
+            if (dbProduct != null && dbProduct.toLowerCase().contains("mysql")) return;
             try (java.sql.Statement stmt = conn.createStatement()) {
                 java.util.List<String> cols = new java.util.ArrayList<>();
                 try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA table_info('boss_data')")) {

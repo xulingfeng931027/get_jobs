@@ -3,13 +3,10 @@ package com.getjobs.application.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.getjobs.application.entity.CommonOptionEntity;
 import com.getjobs.application.mapper.CommonOptionMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -26,25 +23,6 @@ public class CommonOptionController {
     public CommonOptionController(CommonOptionMapper commonOptionMapper, DataSource dataSource) {
         this.commonOptionMapper = commonOptionMapper;
         this.dataSource = dataSource;
-    }
-
-    @PostConstruct
-    public void ensureTableExists() {
-        String createSql = "CREATE TABLE IF NOT EXISTS common_option (" +
-                " id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                " type VARCHAR(50) NOT NULL," +
-                " label VARCHAR(200) NOT NULL," +
-                " value TEXT NOT NULL," +
-                " sort_order INTEGER DEFAULT 0," +
-                " created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
-                " updated_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
-                ")";
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute(createSql);
-            log.info("确保 common_option 表已存在");
-        } catch (Exception e) {
-            log.warn("创建 common_option 表失败: {}", e.getMessage());
-        }
     }
 
     /**
