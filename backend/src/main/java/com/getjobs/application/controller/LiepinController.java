@@ -107,13 +107,13 @@ public class LiepinController {
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
                 try {
-                    liepinJobService.executeDelivery(progressMessage -> {
+                    int deliveredCount = liepinJobService.executeDelivery(progressMessage -> {
                         log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
                     });
-                    
-                    // 投递完成后扣费（按1次计算）
-                    if (finalUserId != null) {
-                        billingService.deductAfterDelivery(finalUserId, 1, "liepin");
+
+                    // 投递完成后扣费（按实际投递数量）
+                    if (finalUserId != null && deliveredCount > 0) {
+                        billingService.deductAfterDelivery(finalUserId, deliveredCount, "liepin");
                     }
                 } catch (Exception e) {
                     log.error("猎聘投递任务执行失败", e);

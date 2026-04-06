@@ -306,13 +306,13 @@ public class ZhilianController {
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
                 try {
-                    zhilianJobService.executeDelivery(progressMessage -> {
+                    int deliveredCount = zhilianJobService.executeDelivery(progressMessage -> {
                         log.info("[{}] {}", progressMessage.getPlatform(), progressMessage.getMessage());
                     });
-                    
-                    // 投递完成后扣费（按1次计算）
-                    if (finalUserId != null) {
-                        billingService.deductAfterDelivery(finalUserId, 1, "zhilian");
+
+                    // 投递完成后扣费（按实际投递数量）
+                    if (finalUserId != null && deliveredCount > 0) {
+                        billingService.deductAfterDelivery(finalUserId, deliveredCount, "zhilian");
                     }
                 } catch (Exception e) {
                     log.error("智联招聘投递任务执行失败", e);

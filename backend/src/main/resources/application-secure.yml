@@ -1,0 +1,50 @@
+# ============================================
+# 安全配置 - 敏感信息
+# ============================================
+# 此文件包含所有敏感配置，不应打包进 JAR
+# 部署时请将此文件放置在 config/ 目录下
+# ============================================
+
+# --- API 密钥配置 ---
+# API 请求签名密钥（生产环境必须修改）
+secure:
+  api:
+    key: ${API_KEY:}
+    endpoint: ${API_ENDPOINT:https://api.getjobs.com}
+
+  # 许可证服务配置
+  license:
+    server: ${LICENSE_SERVER:https://api.getjobs.com/license}
+
+  # 数据库密码（如果需要外部配置）
+  database:
+    password: ${DB_PASSWORD:}
+
+# --- JWT 密钥配置 ---
+# 必须设置强密钥，建议 32+ 字符随机字符串
+admin:
+  jwt:
+    secret: ${ADMIN_JWT_SECRET:}
+
+user:
+  jwt:
+    secret: ${USER_JWT_SECRET:}
+
+# --- Jasypt 加密密钥 ---
+# 生产环境必须通过环境变量设置
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
+
+# --- 开发模式配置 ---
+# 设置为 true 跳过安全检查（仅开发环境）
+security:
+  dev:
+    mode: ${DEV_MODE:false}
+
+# --- 许可证配置 ---
+# 客户端许可证文件路径
+secure:
+  license:
+    file: ${LICENSE_FILE:license.key}
+    dev-mode: ${LICENSE_DEV_MODE:false}

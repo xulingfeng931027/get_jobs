@@ -66,29 +66,45 @@ public class BillingService {
 
     /**
      * 投递后扣费 - 扣减用户投递次数
+     * 仅在余额充足或有效订阅时扣费
      *
      * @param userId 用户ID
      * @param count 投递数量
      * @param platform 招聘平台 (boss/liepin/job51/zhilian)
+     * @return true=扣费成功, false=余额不足或无有效投递
      */
     @Transactional
-    public void deductAfterDelivery(Long userId, int count, String platform) {
+    public boolean deductAfterDelivery(Long userId, int count, String platform) {
+        // 无有效投递不扣费
+        if (count <= 0) {
+            log.info("[计费] 用户{}投递数量为0，不扣费", userId);
+            return true;
+        }
+
         UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
         if (balance == null) {
             log.warn("[计费] 用户{}不存在，跳过扣费", userId);
-            return;
+            return false;
         }
 
-        // 检查是否有有效订阅，有订阅则不扣费
+        // 有订阅则不扣费
         if (hasActiveSubscription(balance)) {
-            log.info("[计费] 用户{}有有效订阅（到期：{}），不扣费，投递平台：{}", 
+            log.info("[计费] 用户{}有有效订阅（到期：{}），不扣费，投递平台：{}",
                 userId, balance.getSubscriptionEndDate(), platform);
-            return;
+            return true;
         }
 
         int currentCount = balance.getApplicationCount() != null ? balance.getApplicationCount() : 0;
+
+        // 余额不足，不扣费
+        if (currentCount < count) {
+            log.warn("[计费] 用户{}余额不足（当前:{}，需要:{}），不扣费，投递平台：{}",
+                userId, currentCount, count, platform);
+            return false;
+        }
+
         int balanceBefore = currentCount;
-        int balanceAfter = Math.max(0, currentCount - count);
+        int balanceAfter = currentCount - count;
 
         // 扣减次数
         userBalanceMapper.updateApplicationCount(userId, balanceAfter);
@@ -108,8 +124,9 @@ public class BillingService {
         int totalConsumption = balance.getTotalConsumption() != null ? balance.getTotalConsumption() : 0;
         userBalanceMapper.updateTotalConsumption(userId, totalConsumption + count);
 
-        log.info("[计费] 用户{}投递扣费：平台={}, 投递数={}, 扣费前={}, 扣费后={}", 
+        log.info("[计费] 用户{}投递扣费成功：平台={}, 投递数={}, 扣费前={}, 扣费后={}",
             userId, platform, count, balanceBefore, balanceAfter);
+        return true;
     }
 
     /**

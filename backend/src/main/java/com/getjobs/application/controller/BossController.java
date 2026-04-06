@@ -119,14 +119,14 @@ public class BossController {
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
                 try {
-                    bossJobService.executeDelivery(pm -> {
+                    int deliveredCount = bossJobService.executeDelivery(pm -> {
                         sendBossProgress(pm);
                         log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
                     });
-                    
-                    // 投递完成后扣费（按1次计算）
-                    if (finalUserId != null) {
-                        billingService.deductAfterDelivery(finalUserId, 1, "boss");
+
+                    // 投递完成后扣费（按实际投递数量）
+                    if (finalUserId != null && deliveredCount > 0) {
+                        billingService.deductAfterDelivery(finalUserId, deliveredCount, "boss");
                     }
                 } catch (Exception e) {
                     log.error("Boss投递任务执行失败", e);

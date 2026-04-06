@@ -6,6 +6,7 @@ import ContentArea from "./components/ContentArea";
 import {ThemeProvider} from "next-themes";
 import dynamic from "next/dynamic";
 import { UserProvider } from "@/lib/auth-context";
+import { ToastProvider } from "@/components/Toast";
 
 // 动态导入 Electron 状态栏（仅客户端）
 const ElectronStatusBar = dynamic(
@@ -35,16 +36,18 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem={false}
         >
-          <UserProvider>
-            <div className="flex min-h-screen">
-              <Sidebar />
-              <ContentArea>
-                {children}
-              </ContentArea>
-            </div>
-            {/* Electron 状态栏（仅在 Electron 环境中显示） */}
-            <ElectronStatusBar />
-          </UserProvider>
+          <ToastProvider>
+            <UserProvider>
+              <div className="flex min-h-screen">
+                <Sidebar />
+                <ContentArea>
+                  {children}
+                </ContentArea>
+              </div>
+              {/* Electron 状态栏（仅在 Electron 环境中显示） */}
+              <ElectronStatusBar />
+            </UserProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

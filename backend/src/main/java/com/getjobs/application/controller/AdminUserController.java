@@ -1,5 +1,6 @@
 package com.getjobs.application.controller;
 
+import com.getjobs.application.entity.ConsumptionLogEntity;
 import com.getjobs.application.entity.RechargeLogEntity;
 import com.getjobs.application.service.AdminUserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,6 +104,48 @@ public class AdminUserController {
         result.put("success", true);
         result.put("data", logs);
         return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 查询用户的消费记录
+     */
+    @GetMapping("/{id}/consumption-logs")
+    public ResponseEntity<Map<String, Object>> getUserConsumptionLogs(@PathVariable Long id) {
+        Map<String, Object> result = new HashMap<>();
+        List<ConsumptionLogEntity> logs = adminUserService.getUserConsumptionLogs(id);
+
+        result.put("success", true);
+        result.put("data", logs);
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * 修改用户余额
+     */
+    @PutMapping("/{id}/balance")
+    public ResponseEntity<Map<String, Object>> updateUserBalance(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            Integer applicationCount = request.get("applicationCount") != null 
+                ? Integer.parseInt(request.get("applicationCount").toString()) : null;
+            Integer aiMatchCount = request.get("aiMatchCount") != null 
+                ? Integer.parseInt(request.get("aiMatchCount").toString()) : null;
+            Integer aiGreetCount = request.get("aiGreetCount") != null 
+                ? Integer.parseInt(request.get("aiGreetCount").toString()) : null;
+            Integer reportCount = request.get("reportCount") != null 
+                ? Integer.parseInt(request.get("reportCount").toString()) : null;
+            String reason = request.get("reason") != null ? request.get("reason").toString() : "";
+
+            result = adminUserService.updateUserBalance(id, applicationCount, aiMatchCount, aiGreetCount, reportCount, reason);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(result);
+        }
     }
 
     /**

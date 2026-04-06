@@ -37,22 +37,22 @@ public class LiepinJobService implements JobPlatformService {
     private volatile boolean shouldStop = false;
 
     @Override
-    public void executeDelivery(Consumer<JobProgressMessage> progressCallback) {
+    public int executeDelivery(Consumer<JobProgressMessage> progressCallback) {
         if (isRunning) {
             progressCallback.accept(JobProgressMessage.warning(PLATFORM, "任务已在运行中"));
-            return;
+            return 0;
         }
 
         try {
             Page page = playwrightManager.getLiepinPage();
             if (page == null) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "猎聘页面未初始化"));
-                return;
+                return 0;
             }
 
             if (!playwrightManager.isLoggedIn(PLATFORM)) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "请先登录猎聘"));
-                return;
+                return 0;
             }
 
             isRunning = true;
@@ -86,9 +86,11 @@ public class LiepinJobService implements JobPlatformService {
 
             progressCallback.accept(JobProgressMessage.success(PLATFORM,
                 String.format("投递任务完成，共发起%d个聊天", deliveredCount)));
+            return deliveredCount;
         } catch (Exception e) {
             log.error("猎聘投递任务执行失败", e);
             progressCallback.accept(JobProgressMessage.error(PLATFORM, "投递失败: " + e.getMessage()));
+            return 0;
         } finally {
             isRunning = false;
             shouldStop = false;

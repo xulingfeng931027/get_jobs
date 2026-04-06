@@ -8,6 +8,7 @@ import {Label} from "@/components/ui/label"
 import PageHeader from "@/app/components/PageHeader"
 import {BiBarChart, BiBriefcase, BiDownload, BiLineChart, BiPieChart, BiRefresh} from "react-icons/bi"
 import {API_PATHS} from "@/lib/api-config"
+import {useToast} from "@/components/Toast"
 
 type NameValue = { name: string; value: number }
 type BucketValue = { bucket: string; value: number }
@@ -90,6 +91,7 @@ function ChartCanvas({ type, labels, data, title, color = "#3b82f6", colors }:{ 
 }
 
 export default function AnalysisContent({ showHeader = false }:{ showHeader?: boolean }) {
+  const { showToast } = useToast();
   const [stats,setStats]=useState<StatsResponse|null>(null)
   const [loadingStats,setLoadingStats]=useState(true)
   const [items,setItems]=useState<Job51Item[]>([])
@@ -170,7 +172,7 @@ export default function AnalysisContent({ showHeader = false }:{ showHeader?: bo
       ])
       const csv = [header,...rows].map(r=>r.map(v=> (String(v).includes(",")?`"${String(v).replace(/"/g,'""')}"`:String(v))).join(",")).join("\n")
       const blob = new Blob([csv],{ type:"text/csv;charset=utf-8;" }); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`job51_jobs_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url)
-    }catch(e){ console.error("export CSV failed",e); alert("导出失败，请稍后重试") } finally { setExporting(false) }
+    }catch(e){ console.error("export CSV failed",e); showToast("导出失败，请稍后重试", "error") } finally { setExporting(false) }
   }
 
   const kpiCards = useMemo(()=>{ const k=stats?.kpi; return [ { title:"总岗位数", value:k?.total??0 }, { title:"已投递", value:k?.delivered??0 }, { title:"未投递", value:k?.pending??0 }, { title:"平均月薪(K)", value:k?.avgMonthlyK??0 } ] },[stats])

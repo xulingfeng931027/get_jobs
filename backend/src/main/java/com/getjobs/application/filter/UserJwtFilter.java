@@ -30,7 +30,7 @@ public class UserJwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         
         // 跳过不需要认证的路径
-        if (path.startsWith("/api/user/register") || 
+        if (path.startsWith("/api/user/register") ||
             path.startsWith("/api/user/login") ||
             path.startsWith("/api/admin/") ||
             path.startsWith("/api/health") ||
@@ -38,11 +38,18 @@ public class UserJwtFilter extends OncePerRequestFilter {
             path.startsWith("/api/boss/") ||
             path.startsWith("/api/liepin/") ||
             path.startsWith("/api/zhilian/") ||
-            path.startsWith("/api/config/") ||
             path.startsWith("/api/cookie/") ||
             path.startsWith("/api/ai/") ||
             path.startsWith("/assets/") ||
             path.startsWith("/dist/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // /api/config/sync 需要认证（但其他 /api/config/* 不需要）
+        if (path.equals("/api/config/sync")) {
+            // 继续进行 JWT 验证
+        } else if (path.startsWith("/api/config/")) {
             filterChain.doFilter(request, response);
             return;
         }

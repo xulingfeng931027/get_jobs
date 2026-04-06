@@ -35,10 +35,10 @@ public class Job51JobService implements JobPlatformService {
     private volatile boolean shouldStop = false;
 
     @Override
-    public void executeDelivery(Consumer<JobProgressMessage> progressCallback) {
+    public int executeDelivery(Consumer<JobProgressMessage> progressCallback) {
         if (isRunning) {
             progressCallback.accept(JobProgressMessage.warning(PLATFORM, "任务已在运行中"));
-            return;
+            return 0;
         }
 
         try {
@@ -46,13 +46,13 @@ public class Job51JobService implements JobPlatformService {
             Page page = playwrightManager.getJob51Page();
             if (page == null) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "51job页面未初始化"));
-                return;
+                return 0;
             }
 
             // 检查是否已登录
             if (!playwrightManager.isLoggedIn(PLATFORM)) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "请先登录51job"));
-                return;
+                return 0;
             }
 
             // 通过校验后再标记运行
@@ -95,9 +95,11 @@ public class Job51JobService implements JobPlatformService {
 
             progressCallback.accept(JobProgressMessage.success(PLATFORM,
                 String.format("投递任务完成，共投递%d个职位", deliveredCount)));
+            return deliveredCount;
         } catch (Exception e) {
             log.error("51job投递任务执行失败", e);
             progressCallback.accept(JobProgressMessage.error(PLATFORM, "投递失败: " + e.getMessage()));
+            return 0;
         } finally {
             isRunning = false;
             shouldStop = false;

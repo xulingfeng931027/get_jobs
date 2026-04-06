@@ -8,8 +8,10 @@ import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import PageHeader from '@/app/components/PageHeader'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from '@/components/Toast'
 
 export default function EnvConfig() {
+  const { showToast } = useToast();
   const [envConfig, setEnvConfig] = useState({
     hookUrl: '',
     baseUrl: '',
@@ -64,7 +66,7 @@ export default function EnvConfig() {
       }
     } catch (error) {
       console.error('获取配置失败:', error)
-      alert('获取配置失败，请检查后端服务是否正常运行')
+      showToast('获取配置失败，请检查后端服务是否正常运行', 'error')
     } finally {
       setLoading(false)
     }

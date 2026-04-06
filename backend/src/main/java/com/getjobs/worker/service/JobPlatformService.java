@@ -15,8 +15,9 @@ public interface JobPlatformService {
      * 执行投递任务
      *
      * @param progressCallback 进度回调函数，用于实时推送任务进度
+     * @return 实际投递数量
      */
-    void executeDelivery(Consumer<JobProgressMessage> progressCallback);
+    int executeDelivery(Consumer<JobProgressMessage> progressCallback);
 
     /**
      * 停止当前投递任务

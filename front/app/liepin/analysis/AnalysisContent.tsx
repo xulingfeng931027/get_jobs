@@ -10,6 +10,7 @@ import PageHeader from "@/app/components/PageHeader"
 import {BiBarChart, BiBriefcase, BiDownload, BiLineChart, BiPieChart, BiRefresh} from "react-icons/bi"
 import {parseSalary} from "@/lib/salary"
 import {API_PATHS} from "@/lib/api-config"
+import {useToast} from "@/components/Toast"
 
 type NameValue = { name: string; value: number }
 type BucketValue = { bucket: string; value: number }
@@ -206,6 +207,7 @@ function ChartCanvas({
 }
 
 export default function AnalysisContent({ showHeader = false }: { showHeader?: boolean }) {
+  const { showToast } = useToast();
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
 
@@ -366,7 +368,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error("export CSV failed", e)
-      alert("导出失败，请稍后重试")
+      showToast("导出失败，请稍后重试", "error")
     } finally {
       setExporting(false)
     }

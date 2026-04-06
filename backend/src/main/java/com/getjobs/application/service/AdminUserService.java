@@ -2,15 +2,18 @@ package com.getjobs.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.getjobs.application.entity.ConsumptionLogEntity;
 import com.getjobs.application.entity.RechargeLogEntity;
 import com.getjobs.application.entity.UserBalanceEntity;
 import com.getjobs.application.entity.UserEntity;
+import com.getjobs.application.mapper.ConsumptionLogMapper;
 import com.getjobs.application.mapper.RechargeLogMapper;
 import com.getjobs.application.mapper.UserBalanceMapper;
 import com.getjobs.application.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -31,6 +34,9 @@ public class AdminUserService {
 
     @Autowired
     private RechargeLogMapper rechargeLogMapper;
+    
+    @Autowired
+    private ConsumptionLogMapper consumptionLogMapper;
 
     /**
      * 查询用户列表（仅C端用户，排除admin_user表的管理员）
@@ -135,6 +141,70 @@ public class AdminUserService {
      */
     public List<RechargeLogEntity> getUserRechargeLogs(Long userId) {
         return rechargeLogMapper.selectByUserId(userId);
+    }
+    
+    /**
+     * 查询用户的消费记录
+     */
+    public List<ConsumptionLogEntity> getUserConsumptionLogs(Long userId) {
+        return consumptionLogMapper.selectByUserId(userId);
+    }
+    
+    /**
+     * 修改用户余额
+     */
+    @Transactional
+    public Map<String, Object> updateUserBalance(Long userId, Integer applicationCount, 
+                                                 Integer aiMatchCount, Integer aiGreetCount, 
+                                                 Integer reportCount, String reason) {
+        Map<String, Object> result = new HashMap<>();
+        
+        UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
+        if (balance == null) {
+            throw new RuntimeException("用户余额记录不存在");
+        }
+        
+        // 记录修改前的余额
+        Integer oldApplicationCount = balance.getApplicationCount();
+        Integer oldAiMatchCount = balance.getAiMatchCount();
+        Integer oldAiGreetCount = balance.getAiGreetCount();
+        Integer oldReportCount = balance.getReportCount();
+        
+        // 更新余额
+        if (applicationCount != null) {
+            balance.setApplicationCount(applicationCount);
+        }
+        if (aiMatchCount != null) {
+            balance.setAiMatchCount(aiMatchCount);
+        }
+        if (aiGreetCount != null) {
+            balance.setAiGreetCount(aiGreetCount);
+        }
+        if (reportCount != null) {
+            balance.setReportCount(reportCount);
+        }
+        balance.setUpdatedAt(LocalDateTime.now());
+        
+        userBalanceMapper.updateById(balance);
+        
+        // 构建返回结果
+        result.put("success", true);
+        result.put("message", "余额修改成功");
+        result.put("oldBalance", Map.of(
+            "applicationCount", oldApplicationCount,
+            "aiMatchCount", oldAiMatchCount,
+            "aiGreetCount", oldAiGreetCount,
+            "reportCount", oldReportCount
+        ));
+        result.put("newBalance", Map.of(
+            "applicationCount", balance.getApplicationCount(),
+            "aiMatchCount", balance.getAiMatchCount(),
+            "aiGreetCount", balance.getAiGreetCount(),
+            "reportCount", balance.getReportCount()
+        ));
+        result.put("reason", reason);
+        
+        return result;
     }
 
     /**

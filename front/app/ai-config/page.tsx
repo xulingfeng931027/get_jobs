@@ -8,8 +8,10 @@ import {Label} from '@/components/ui/label'
 import {Textarea} from '@/components/ui/textarea'
 import PageHeader from '@/app/components/PageHeader'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from '@/components/Toast'
 
 export default function AiConfigPage() {
+  const { showToast } = useToast();
   const [aiConfig, setAiConfig] = useState({
     introduce: '',
     prompt: '',
@@ -96,7 +98,7 @@ export default function AiConfigPage() {
       console.error('更新enable_ai失败:', e)
       // 回滚
       setEnableAi((prev) => (prev ? 0 : 1))
-      alert('切换失败，请检查后端服务连接')
+      showToast('切换失败，请检查后端服务连接', 'error')
     }
   }
 
@@ -115,13 +117,13 @@ export default function AiConfigPage() {
       const result = await response.json()
 
       if (result.success) {
-        alert('AI配置已保存！')
+        showToast('AI配置已保存！', 'success')
       } else {
-        alert('保存失败: ' + result.message)
+        showToast('保存失败: ' + result.message, 'error')
       }
     } catch (error) {
       console.error('保存AI配置失败:', error)
-      alert('保存失败，请检查服务器连接！')
+      showToast('保存失败，请检查服务器连接！', 'error')
     } finally {
       setLoading(false)
     }

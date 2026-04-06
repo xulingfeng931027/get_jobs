@@ -14,7 +14,8 @@ spring:
     url: jdbc:mysql://43.143.182.159:6033/get_jobs?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: app_user
-    password: 7hxUKgrA7x6D!FZwHLFz
+    # 数据库密码已加密，使用 ENC(...) 格式
+    password: ENC(tmoqXZMC+8WPanVy6m1ZmBfr1toBiLHMuRxupskKRZg=)
     hikari:
       maximum-pool-size: 10
       connection-test-query: SELECT 1
@@ -23,6 +24,15 @@ spring:
   output:
     ansi:
       enabled: always
+
+# Jasypt 加密配置
+# 加密密钥优先级：
+# 1. 环境变量 JASYPT_ENCRYPTOR_PASSWORD
+# 2. JVM 参数 -Djasypt.encryptor.password=xxx
+# 3. 此处默认值（仅开发环境）
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:get-jobs-encryption-key-2026}
 
 # 服务器配置
 server:
@@ -33,7 +43,7 @@ logging:
   level:
     root: INFO
   pattern:
-    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%thread]){magenta} %clr(%-5level){highlight} %clr(%logger{36}){cyan} %clr(-){faint} %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: ./target/logs/get-jobs.log
   logback:
@@ -88,3 +98,11 @@ playwright:
   
   # Cookie 管理
   cookie-refresh-before-expiry: 3600000  # 过期前1小时刷新
+
+  # 浏览器安装配置
+  auto-install: true                  # 启动时自动检查/安装浏览器
+  browser-channel: chromium           # 浏览器类型: chromium/firefox/webkit
+  install-dir: ""                    # 浏览器安装目录（空则使用默认位置）
+security:
+    dev:
+        mode: true

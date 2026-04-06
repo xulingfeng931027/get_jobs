@@ -160,6 +160,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Jasypt Spring Boot Starter (配置加密) -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
         <!-- ── Lombok（编译期注解处理，provided + optional）── -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -190,6 +197,56 @@
     <!-- ===== 构建插件 ===== -->
     <build>
         <plugins>
+
+            <!-- ClassFinal 代码混淆插件（在 Spring Boot repackage 之前执行） -->
+            <plugin>
+                <groupId>net.roseboy</groupId>
+                <artifactId>classfinal-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <!-- 在 package 阶段执行，在 Spring Boot repackage 之前 -->
+                        <id>obfuscate-before-repackage</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>classFinal</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- 混淆密码 -->
+                    <password>${project.artifactId}</password>
+                    <!-- 不混淆的类 -->
+                    <excludes>com.getjobs.GetJobsApplication</excludes>
+                    <!-- 打包后的 jar 文件 -->
+                    <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
+                    <!-- 输出加密后的 jar（带 -encrypted 后缀） -->
+                    <outputJar>${project.build.directory}/${project.build.finalName}-encrypted.jar</outputJar>
+                </configuration>
+            </plugin>
+
+            <!-- Maven Antrun Plugin：重命名加密 jar，为 repackage 做准备 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>rename-encrypted-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <move file="${project.build.directory}/${project.build.finalName}-encrypted.jar"
+                                      tofile="${project.build.directory}/${project.build.finalName}.jar"
+                                      overwrite="true"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
             <!-- Spring Boot Maven Plugin：打包可执行 Jar + 生成 build-info -->
             <plugin>
@@ -254,6 +311,13 @@
                         -Dsun.stderr.encoding=UTF-8
                     </argLine>
                 </configuration>
+            </plugin>
+
+            <!-- Exec Maven Plugin (运行加密工具) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
             </plugin>
 
         </plugins>

@@ -35,10 +35,10 @@ public class ZhilianJobService implements JobPlatformService {
     private volatile boolean shouldStop = false;
 
     @Override
-    public void executeDelivery(Consumer<JobProgressMessage> progressCallback) {
+    public int executeDelivery(Consumer<JobProgressMessage> progressCallback) {
         if (isRunning) {
             progressCallback.accept(JobProgressMessage.warning(PLATFORM, "任务已在运行中"));
-            return;
+            return 0;
         }
 
         try {
@@ -46,13 +46,13 @@ public class ZhilianJobService implements JobPlatformService {
             Page page = playwrightManager.getZhilianPage();
             if (page == null) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "智联招聘页面未初始化"));
-                return;
+                return 0;
             }
 
             // 检查是否已登录
             if (!playwrightManager.isLoggedIn(PLATFORM)) {
                 progressCallback.accept(JobProgressMessage.error(PLATFORM, "请先登录智联招聘"));
-                return;
+                return 0;
             }
 
             // 通过校验后再标记运行
@@ -88,9 +88,11 @@ public class ZhilianJobService implements JobPlatformService {
 
             progressCallback.accept(JobProgressMessage.success(PLATFORM,
                 String.format("投递任务完成，共投递%d个职位", deliveredCount)));
+            return deliveredCount;
         } catch (Exception e) {
             log.error("智联招聘投递任务执行失败", e);
             progressCallback.accept(JobProgressMessage.error(PLATFORM, "投递失败: " + e.getMessage()));
+            return 0;
         } finally {
             isRunning = false;
             shouldStop = false;

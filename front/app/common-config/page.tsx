@@ -7,6 +7,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Input} from '@/components/ui/input'
 import PageHeader from '@/app/components/PageHeader'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from '@/components/Toast'
 
 interface CommonOption {
   id: number
@@ -19,6 +20,7 @@ interface CommonOption {
 }
 
 export default function CommonConfigPage() {
+  const { showToast } = useToast();
   const [options, setOptions] = useState<CommonOption[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -180,11 +182,11 @@ export default function CommonConfigPage() {
       } else {
         const errorText = await response.text()
         console.error('删除选项失败:', response.status, errorText)
-        alert(`删除失败: ${response.status}`)
+        showToast(`删除失败: ${response.status}`, 'error')
       }
     } catch (error) {
       console.error('删除选项失败:', error)
-      alert('删除失败: 网络错误')
+      showToast('删除失败: 网络错误', 'error')
     }
   }
 

@@ -415,14 +415,14 @@ public class JobController {
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
                 try {
-                    job51JobService.executeDelivery(pm -> {
+                    int deliveredCount = job51JobService.executeDelivery(pm -> {
                         sendJob51Progress(pm);
                         log.info("[{}] {}", pm.getPlatform(), pm.getMessage());
                     });
-                    
-                    // 投递完成后扣费（按1次计算）
-                    if (finalUserId != null) {
-                        billingService.deductAfterDelivery(finalUserId, 1, "51job");
+
+                    // 投递完成后扣费（按实际投递数量）
+                    if (finalUserId != null && deliveredCount > 0) {
+                        billingService.deductAfterDelivery(finalUserId, deliveredCount, "51job");
                     }
                 } catch (Exception e) {
                     log.error("51job投递任务执行失败", e);
