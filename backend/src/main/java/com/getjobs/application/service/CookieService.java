@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.getjobs.application.entity.CookieEntity;
+import com.getjobs.worker.utils.MachineIdProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,9 @@ import java.time.LocalDateTime;
 /**
  * Cookie服务类 - 基于Redis存储
  * 不再写入数据库
+ *
+ * Key格式: cookie:machineId:userId:platform
+ * machineId 用于避免多机器之间cookie串号
  */
 @Slf4j
 @Service
@@ -34,7 +38,7 @@ public class CookieService {
     }
 
     /**
-     * 根据平台获取Cookie（使用当前用户）
+     * 根据平台获取Cookie（使用当前用户+本机标识）
      * @param platform 平台名称（boss/zhilian/job51/liepin）
      * @return Cookie实体
      */
@@ -43,7 +47,7 @@ public class CookieService {
     }
 
     /**
-     * 根据平台和用户ID获取Cookie
+     * 根据平台和用户ID获取Cookie（使用本机标识避免跨机器cookie串号）
      * @param platform 平台名称
      * @param userId 用户ID（为null时使用默认key）
      * @return Cookie实体
@@ -73,7 +77,7 @@ public class CookieService {
     }
 
     /**
-     * 保存或更新Cookie到Redis（指定用户ID）
+     * 保存或更新Cookie到Redis（指定用户ID，本机标识自动加入key）
      * @param platform 平台名称
      * @param userId 用户ID
      * @param cookieValue Cookie值
@@ -181,14 +185,18 @@ public class CookieService {
 
     /**
      * 构建Redis key
+     * 格式: cookie:machineId:userId:platform
+     * machineId 用于避免多机器之间cookie串号
+     *
      * @param platform 平台名称
      * @param userId 用户ID
      * @return Redis key
      */
     private String buildKey(String platform, Long userId) {
+        String machineId = MachineIdProvider.getMachineId();
         if (userId == null) {
-            return COOKIE_KEY_PREFIX + platform;
+            return COOKIE_KEY_PREFIX + machineId + ":" + platform;
         }
-        return COOKIE_KEY_PREFIX + userId + ":" + platform;
+        return COOKIE_KEY_PREFIX + machineId + ":" + userId + ":" + platform;
     }
 }

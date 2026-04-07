@@ -4,6 +4,7 @@ import com.getjobs.application.entity.UserBalanceEntity;
 import com.getjobs.application.entity.UserEntity;
 import com.getjobs.application.mapper.UserBalanceMapper;
 import com.getjobs.application.mapper.UserMapper;
+import com.getjobs.worker.utils.MachineIdProvider;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,8 @@ public class UserAuthService {
     private UserBalanceMapper userBalanceMapper;
     @Autowired
     private StringRedisTemplate redisTemplate;
+    @Autowired
+    private DeviceService deviceService;
     @Value("${user.jwt.secret:GetJobs-User-Secret-Key-2026!@#$}")
     private String jwtSecret;
     @Value("${user.jwt.expiration:604800000}")
@@ -158,6 +161,37 @@ public class UserAuthService {
             return result;
         }
 
+        // ============== 设备数量限制检查（最多2台同时登录）==============
+        String machineId = MachineIdProvider.getMachineId();
+        boolean isCurrentDeviceBound = deviceService.isDeviceBound(user.getId(), machineId);
+        int currentDeviceCount = deviceService.getDeviceCount(user.getId());
+
+        // 如果当前设备未绑定，且已达设备数量上限，则拒绝登录
+        if (!isCurrentDeviceBound && currentDeviceCount >= 2) {
+            log.warn("[用户登录] 用户{}尝试从新设备登录被拒绝，当前设备数: {}/2", username, currentDeviceCount);
+            result.put("success", false);
+            result.put("message", "登录设备数量已达上限（2台），请先解绑旧设备后再试");
+            result.put("deviceLimitReached", true);
+            result.put("currentDeviceCount", currentDeviceCount);
+            result.put("maxDevices", 2);
+            return result;
+        }
+
+        // 如果是新设备，自动绑定
+        if (!isCurrentDeviceBound) {
+            Map<String, Object> bindResult = deviceService.bindDevice(user.getId(), machineId, getDeviceName());
+            if (!(Boolean) bindResult.get("success")) {
+                log.warn("[用户登录] 用户{}设备绑定失败: {}", username, bindResult.get("message"));
+                // 设备绑定失败不阻止登录，但记录警告
+            } else {
+                log.info("[用户登录] 用户{}绑定新设备，当前设备数: {}/2", username, bindResult.get("deviceCount"));
+            }
+        } else {
+            // 已绑定设备，更新最后登录时间
+            log.debug("[用户登录] 用户{}使用已绑定设备登录: {}", username, machineId);
+        }
+        // ============== 设备数量限制检查 end ==============
+
         // 生成 JWT Token
         String token = generateToken(user.getId(), user.getUsername());
 
@@ -167,11 +201,12 @@ public class UserAuthService {
         Map<String, String> sessionData = new HashMap<>();
         sessionData.put("userId", String.valueOf(user.getId()));
         sessionData.put("username", user.getUsername());
+        sessionData.put("machineId", machineId);
         sessionData.put("loginTime", LocalDateTime.now().toString());
         redisTemplate.opsForHash().putAll(sessionKey, sessionData);
         redisTemplate.expire(sessionKey, SESSION_TTL);
 
-        log.info("[用户登录] 用户{}登录成功", username);
+        log.info("[用户登录] 用户{}登录成功，设备: {}", username, machineId);
 
         result.put("success", true);
         result.put("message", "登录成功");
@@ -181,6 +216,7 @@ public class UserAuthService {
         result.put("username", user.getUsername());
         result.put("email", user.getEmail());
         result.put("phone", user.getPhone());
+        result.put("machineId", machineId);
 
         return result;
     }
@@ -359,5 +395,15 @@ public class UserAuthService {
         String sessionKey = SESSION_PREFIX + sessionId;
         Boolean result = redisTemplate.delete(sessionKey);
         return result != null && result;
+    }
+
+    /**
+     * 获取当前设备的友好名称
+     */
+    private String getDeviceName() {
+        String os = System.getProperty("os.name", "unknown");
+        String computerName = System.getProperty("computerName",
+                System.getProperty("host.name", "unknown"));
+        return os + " - " + computerName;
     }
 }
