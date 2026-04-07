@@ -13,8 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
- * @author loks666
- * 项目链接: <a href="https://github.com/loks666/get_jobs">https://github.com/loks666/get_jobs</a>
+ * @author xulingfeng
+ * 项目链接: <a href="https://github.com/xulingfeng/get_jobs">https://github.com/xulingfeng/get_jobs</a>
  */
 @Slf4j
 @Service

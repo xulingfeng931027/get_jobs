@@ -22,6 +22,12 @@ public class CookieEntity {
     private Long id;
 
     /**
+     * 用户ID
+     */
+    @TableField("user_id")
+    private Long userId;
+
+    /**
      * 平台名称（boss/zhilian/job51/liepin）
      */
     @TableField("platform")

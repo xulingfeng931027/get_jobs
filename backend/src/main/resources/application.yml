@@ -1,6 +1,6 @@
 spring:
   application:
-    name: get_jobs
+    name: find_jobs
   profiles:
     active: dev
   info:
@@ -24,6 +24,12 @@ spring:
   output:
     ansi:
       enabled: always
+  data:
+    redis:
+      host: 43.143.182.159
+      database: 1
+      password: redi23^FDSA2FD!ASfd2
+      port: 7380
 
 # Jasypt 加密配置
 # 加密密钥优先级：

@@ -20,8 +20,8 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * @author loks666
- * 项目链接: <a href="https://github.com/loks666/get_jobs">https://github.com/loks666/get_jobs</a>
+ * @author xulingfeng
+ * 项目链接: <a href="https://github.com/xulingfeng/get_jobs">https://github.com/xulingfeng/get_jobs</a>
  * 智联招聘自动投递 - Playwright版本
  */
 @Slf4j

@@ -40,7 +40,10 @@ public class UserBalanceEntity {
     
     /** 累计消费次数 */
     private Integer totalConsumption;
-    
+
+    /** 套餐已用投递次数 */
+    private Integer packageUsedCount;
+
     /** 创建时间 */
     private LocalDateTime createdAt;
     

@@ -285,9 +285,11 @@ public class JobController {
 
     /** 触发51job登录流程 */
     @PostMapping("/51job/login")
-    public ResponseEntity<Map<String, Object>> triggerLogin() {
+    public ResponseEntity<Map<String, Object>> triggerLogin(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 设置当前用户ID，登录成功后Cookie将与该用户关联
+            playwrightManager.setCurrentUserId(userId);
             playwrightManager.trigger51jobLogin();
             response.put("success", true);
             response.put("message", "已打开51job登录页并尝试点击扫码登录，请扫码完成登录");
@@ -320,11 +322,11 @@ public class JobController {
 
     /** 退出51job登录 */
     @PostMapping("/51job/logout")
-    public ResponseEntity<Map<String, Object>> logout51job() {
+    public ResponseEntity<Map<String, Object>> logout51job(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
             playwrightManager.setLoginStatus("51job", false);
-            cookieService.clearCookieByPlatform("51job", "manual logout");
+            cookieService.clearCookieByPlatformAndUserId("51job", userId, "manual logout");
             try { playwrightManager.clear51jobCookies(); } catch (Exception e) { log.warn("清理51job上下文Cookie异常: {}", e.getMessage()); }
             response.put("success", true);
             response.put("message", "51job已退出登录，数据库Cookie和上下文Cookie均已清理");
@@ -339,13 +341,14 @@ public class JobController {
 
     /** 读取数据库中的 51job Cookie 记录 */
     @GetMapping("/51job/cookie")
-    public ResponseEntity<Map<String, Object>> get51jobCookieRecord() {
+    public ResponseEntity<Map<String, Object>> get51jobCookieRecord(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
-            CookieEntity cookie = cookieService.getCookieByPlatform("51job");
+            CookieEntity cookie = cookieService.getCookieByPlatformAndUserId("51job", userId);
             Map<String, Object> data = new HashMap<>();
             if (cookie != null) {
                 data.put("id", cookie.getId());
+                data.put("userId", cookie.getUserId());
                 data.put("platform", cookie.getPlatform());
                 data.put("cookie_value", cookie.getCookieValue());
                 data.put("remark", cookie.getRemark());
@@ -387,6 +390,9 @@ public class JobController {
     public ResponseEntity<Map<String, Object>> start51jobJob(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 设置当前用户ID（触发Cookie重新加载）
+            playwrightManager.setCurrentUserId(userId);
+
             // 计费检查
             if (userId != null) {
                 Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
@@ -410,7 +416,7 @@ public class JobController {
                 response.put("status", "running");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // 启动投递任务，投递完成后扣费
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {

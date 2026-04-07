@@ -40,7 +40,7 @@ public class EncryptionTool {
             System.out.println("📝 明文: " + plainText);
             System.out.println("🔒 密文: " + encrypted);
             System.out.println();
-            System.out.println("📋 复制到 application.yaml:");
+            System.out.println("📋 复制到 application.yml:");
             System.out.println("   password: " + encrypted);
         } else {
             // 交互式加密示例

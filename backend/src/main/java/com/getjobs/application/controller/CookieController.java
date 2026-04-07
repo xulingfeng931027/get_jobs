@@ -30,7 +30,10 @@ public class CookieController {
     private final PlaywrightManager playwrightManager;
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getCookie(@RequestParam("platform") String platform) {
+    public ResponseEntity<Map<String, Object>> getCookie(
+            @RequestParam("platform") String platform,
+            @RequestAttribute(value = "userId", required = false) Long userId
+    ) {
         Map<String, Object> response = new HashMap<>();
         try {
             if (!ALLOWED_PLATFORMS.contains(platform)) {
@@ -39,10 +42,11 @@ public class CookieController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            CookieEntity cookie = cookieService.getCookieByPlatform(platform);
+            CookieEntity cookie = cookieService.getCookieByPlatformAndUserId(platform, userId);
             Map<String, Object> data = new HashMap<>();
             if (cookie != null) {
                 data.put("id", cookie.getId());
+                data.put("userId", cookie.getUserId());
                 data.put("platform", cookie.getPlatform());
                 data.put("cookie_value", cookie.getCookieValue());
                 data.put("remark", cookie.getRemark());
@@ -67,7 +71,8 @@ public class CookieController {
     @PostMapping("/save")
     public ResponseEntity<Map<String, Object>> saveCookie(
             @RequestParam("platform") String platform,
-            @RequestParam(value = "remark", defaultValue = "manual save") String remark
+            @RequestParam(value = "remark", defaultValue = "manual save") String remark,
+            @RequestAttribute(value = "userId", required = false) Long userId
     ) {
         Map<String, Object> response = new HashMap<>();
         try {
@@ -77,9 +82,11 @@ public class CookieController {
                 return ResponseEntity.badRequest().body(response);
             }
 
+            // 设置当前用户ID（使Cookie与当前登录用户关联）
+            playwrightManager.setCurrentUserId(userId);
             playwrightManager.saveCookiesToDb(platform, remark);
             response.put("success", true);
-            response.put("message", String.format("已主动保存 %s Cookie 到数据库", platform));
+            response.put("message", String.format("已保存 %s Cookie（用户=%s）", platform, userId));
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             response.put("success", false);

@@ -72,7 +72,8 @@ export default function Sidebar() {
   ]
 
   const platformGroup = [
-    { href: '/boss', icon: BiBriefcase, label: 'Boss直聘', color: 'text-indigo-600 dark:text-indigo-400' },
+    // Boss直聘暂时屏蔽
+    // { href: '/boss', icon: BiBriefcase, label: 'Boss直聘', color: 'text-indigo-600 dark:text-indigo-400' },
     { href: '/liepin', icon: BiSearch, label: '猎聘', color: 'text-purple-600 dark:text-purple-400' },
     { href: '/51job', icon: BiTask, label: '51job', color: 'text-blue-600 dark:text-blue-400' },
     { href: '/zhilian', icon: BiUserCircle, label: '智联招聘', color: 'text-cyan-600 dark:text-cyan-400' },

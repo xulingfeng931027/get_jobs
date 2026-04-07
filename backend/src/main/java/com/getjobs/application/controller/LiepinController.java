@@ -76,6 +76,9 @@ public class LiepinController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 设置当前用户ID（触发Cookie重新加载）
+            playwrightManager.setCurrentUserId(userId);
+
             // 计费检查
             if (userId != null) {
                 Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
@@ -290,13 +293,14 @@ public class LiepinController {
      * 调试接口：读取数据库中的猎聘 Cookie 记录
      */
     @GetMapping("/cookie")
-    public ResponseEntity<Map<String, Object>> getLiepinCookieRecord() {
+    public ResponseEntity<Map<String, Object>> getLiepinCookieRecord(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
-            CookieEntity cookie = cookieService.getCookieByPlatform("liepin");
+            CookieEntity cookie = cookieService.getCookieByPlatformAndUserId("liepin", userId);
             Map<String, Object> data = new HashMap<>();
             if (cookie != null) {
                 data.put("id", cookie.getId());
+                data.put("userId", cookie.getUserId());
                 data.put("platform", cookie.getPlatform());
                 data.put("cookie_value", cookie.getCookieValue());
                 data.put("remark", cookie.getRemark());
@@ -321,14 +325,14 @@ public class LiepinController {
      * 退出登录：清空数据库Cookie并清理运行中的上下文Cookie
      */
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logoutLiepin() {
+    public ResponseEntity<Map<String, Object>> logoutLiepin(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
             // 更新登录状态为未登录并触发SSE通知
             playwrightManager.setLoginStatus("liepin", false);
 
-            // 清空数据库中猎聘平台的所有 Cookie 值
-            cookieService.clearCookieByPlatform("liepin", "manual logout");
+            // 清空数据库中猎聘平台的Cookie值（按用户）
+            cookieService.clearCookieByPlatformAndUserId("liepin", userId, "manual logout");
 
             // 清理运行中的上下文Cookie
             try {
@@ -352,9 +356,11 @@ public class LiepinController {
      * 调试接口：主动保存当前上下文中的猎聘 Cookie 到数据库
      */
     @PostMapping("/save-cookie")
-    public ResponseEntity<Map<String, Object>> saveLiepinCookie() {
+    public ResponseEntity<Map<String, Object>> saveLiepinCookie(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 设置当前用户ID
+            playwrightManager.setCurrentUserId(userId);
             playwrightManager.saveLiepinCookiesToDb("manual save");
             response.put("success", true);
             response.put("message", "已主动保存猎聘Cookie到数据库");

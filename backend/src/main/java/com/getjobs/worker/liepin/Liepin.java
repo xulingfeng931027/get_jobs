@@ -29,8 +29,8 @@ import static com.getjobs.worker.liepin.Locators.*;
 
 
 /**
- * @author loks666
- * 项目链接: <a href="https://github.com/loks666/get_jobs">https://github.com/loks666/get_jobs</a>
+ * @author xulingfeng
+ * 项目链接: <a href="https://github.com/xulingfeng/get_jobs">https://github.com/xulingfeng/get_jobs</a>
  */
 @Slf4j
 @Component
@@ -447,9 +447,10 @@ public class Liepin {
                 continue;
             }
 
-            // 查找聊一聊按钮
+            // 查找聊一聊按钮或投简历按钮
             Locator button = null;
             String buttonText = "";
+            boolean isDeliverButton = false; // 是否为投递按钮（区别于聊天按钮）
             try {
                 // 在当前岗位卡片中查找按钮，尝试多种选择器
 
@@ -461,6 +462,7 @@ public class Liepin {
                     "button[class*='chat'], button[class*='talk']",
                     ".chat-btn, .talk-btn, .contact-btn",
                     "button:has-text('聊一聊')",
+                    "button:has-text('投简历')",
                     "button" // 最后尝试所有按钮
                 };
 
@@ -479,9 +481,14 @@ public class Liepin {
                                     if (text != null && !text.trim().isEmpty()) {
                                         button = tempButton;
                                         buttonText = text.trim();
-                                        // 只关注"聊一聊"按钮
+                                        // 优先关注"聊一聊"和"投简历"按钮
                                         if (text.contains("聊一聊")) {
-                                            log.debug("找到目标按钮: '{}'", text);
+                                            isDeliverButton = false;
+                                            log.debug("找到聊天按钮: '{}'", text);
+                                            break;
+                                        } else if (text.contains("投简历")) {
+                                            isDeliverButton = true;
+                                            log.debug("找到投递按钮: '{}'", text);
                                             break;
                                         }
                                     }
@@ -491,7 +498,7 @@ public class Liepin {
                             }
                         }
 
-                        if (button != null && buttonText.contains("聊一聊")) {
+                        if (button != null && (buttonText.contains("聊一聊") || buttonText.contains("投简历"))) {
                             break;
                         }
                     } catch (Exception e) {
@@ -514,8 +521,8 @@ public class Liepin {
                 jobIdForUpdate = extractJobIdFromCard(currentJobCard);
             }
 
-            // 检查按钮文本并点击
-            if (button != null && buttonText.contains("聊一聊")) {
+            // 检查按钮文本并点击（支持聊一聊和投简历两种按钮）
+            if (button != null && (buttonText.contains("聊一聊") || buttonText.contains("投简历"))) {
                 try {
                     // 在点击按钮前进行鼠标微调，先向右移动2像素，再向左移动2像素
                     try {
@@ -547,36 +554,59 @@ public class Liepin {
                     }
 
                     button.click();
-                    // PlaywrightUtil.sleep(1); // 等待点击响应
 
-                    // 猎聘会自动发送打招呼语，所以我们只需要关闭聊天窗口
-                    try {
-                        // 等待聊天界面加载
-                        page.waitForSelector(CHAT_HEADER, new Page.WaitForSelectorOptions().setTimeout(3000));
-
-                        // 直接关闭聊天窗口
-                        Locator close = page.locator(CHAT_CLOSE);
-                        if (close.count() > 0) {
-                            PlaywrightUtil.sleep(1);
-                            close.click();
+                    // 根据按钮类型处理不同的后续流程
+                    if (buttonText.contains("投简历")) {
+                        // 投简历按钮：投递后可能需要确认，尝试等待并关闭投递成功弹窗
+                        try {
+                            // 等待投递结果（可能出现的成功提示或确认弹窗）
+                            Thread.sleep(2000);
+                            // 尝试关闭可能出现的弹窗
+                            Locator closeDeliver = page.locator("button[class*='close'], .ant-modal-close, button:has-text('确定')").first();
+                            if (closeDeliver.count() > 0 && closeDeliver.isVisible()) {
+                                closeDeliver.click();
+                                log.debug("已关闭投递弹窗");
+                            }
+                        } catch (Exception e) {
+                            log.debug("处理投递弹窗失败: {}", e.getMessage());
                         }
-
-                        resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
+                        resultList.add(sb.append("【投递】").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
                         sb.setLength(0);
                         Bot.recordDelivery("猎聘", companyName, jobName);
                         // 点击成功后标记为已投递
                         if (jobIdForUpdate != null) {
                             liepinService.markDelivered(jobIdForUpdate);
                         }
+                    } else {
+                        // 聊一聊按钮：猎聘会自动发送打招呼语，所以只需要关闭聊天窗口
+                        try {
+                            // 等待聊天界面加载
+                            page.waitForSelector(CHAT_HEADER, new Page.WaitForSelectorOptions().setTimeout(3000));
 
-                    } catch (Exception e) {
-                        log.warn("关闭聊天窗口失败，但投递可能已成功: {}", e.getMessage());
-                        // 即使关闭失败，也认为投递成功
-                        resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
-                        sb.setLength(0);
-                        Bot.recordDelivery("猎聘", companyName, jobName);
-                        if (jobIdForUpdate != null) {
-                            liepinService.markDelivered(jobIdForUpdate);
+                            // 直接关闭聊天窗口
+                            Locator close = page.locator(CHAT_CLOSE);
+                            if (close.count() > 0) {
+                                PlaywrightUtil.sleep(1);
+                                close.click();
+                            }
+
+                            resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
+                            sb.setLength(0);
+                            Bot.recordDelivery("猎聘", companyName, jobName);
+                            // 点击成功后标记为已投递
+                            if (jobIdForUpdate != null) {
+                                liepinService.markDelivered(jobIdForUpdate);
+                            }
+
+                        } catch (Exception e) {
+                            log.warn("关闭聊天窗口失败，但投递可能已成功: {}", e.getMessage());
+                            // 即使关闭失败，也认为投递成功
+                            resultList.add(sb.append("【").append(companyName).append(" ").append(jobName).append(" ").append(salary).append(" ").append(recruiterName).append(" ").append("】").toString());
+                            sb.setLength(0);
+                            Bot.recordDelivery("猎聘", companyName, jobName);
+                            if (jobIdForUpdate != null) {
+                                liepinService.markDelivered(jobIdForUpdate);
+                            }
                         }
                     }
 

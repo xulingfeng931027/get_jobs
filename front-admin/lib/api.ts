@@ -1,6 +1,15 @@
 // API 基础配置
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:18888";
 
+// 跳转到登录页
+export function redirectToLogin() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_username");
+    window.location.href = "/login";
+  }
+}
+
 // 通用请求函数
 export async function apiRequest<T>(
   endpoint: string,
@@ -21,6 +30,12 @@ export async function apiRequest<T>(
     ...options,
     headers,
   });
+
+  // 401 未授权，清除 token 并跳转登录页
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error("登录已过期，请重新登录");
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "网络请求失败" }));
@@ -115,4 +130,34 @@ export async function getUserRechargeLogs(id: number) {
 // 消费记录 API
 export async function getUserConsumptionLogs(id: number) {
   return apiRequest<any[]>(`/api/admin/users/${id}/consumption-logs`);
+}
+
+// =====================================================
+// 套餐管理 API
+// =====================================================
+
+// 获取套餐类型列表
+export async function getPackageDefinitions() {
+  return apiRequest<any[]>(`/api/admin/package/definitions`);
+}
+
+// 获取用户套餐状态
+export async function getUserPackage(userId: number) {
+  return apiRequest<any>(`/api/admin/package/user/${userId}`);
+}
+
+// 开通套餐
+export async function activatePackage(userId: number, packageType: number) {
+  return apiRequest<any>(`/api/admin/package/activate`, {
+    method: "POST",
+    body: JSON.stringify({ userId, packageType }),
+  });
+}
+
+// 取消套餐
+export async function cancelPackage(userId: number, packageId: number) {
+  return apiRequest<any>(`/api/admin/package/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ userId, packageId }),
+  });
 }

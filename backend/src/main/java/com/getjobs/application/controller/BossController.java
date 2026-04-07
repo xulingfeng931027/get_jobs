@@ -91,6 +91,9 @@ public class BossController {
     public ResponseEntity<Map<String, Object>> startBoss(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 设置当前用户ID（触发Cookie重新加载）
+            playwrightManager.setCurrentUserId(userId);
+
             // 计费检查
             if (userId != null) {
                 Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);
@@ -114,7 +117,7 @@ public class BossController {
                 response.put("status", "running");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // 启动投递任务，投递完成后扣费
             final Long finalUserId = userId;
             CompletableFuture.runAsync(() -> {
@@ -172,15 +175,15 @@ public class BossController {
 
     /** POST - 退出Boss登录 */
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logoutBoss() {
+    public ResponseEntity<Map<String, Object>> logoutBoss(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
             playwrightManager.setLoginStatus("boss", false);
-            cookieService.clearCookieByPlatform("boss", "manual logout");
-            try { 
-                playwrightManager.clearBossCookies(); 
-            } catch (Exception e) { 
-                log.warn("清理Boss上下文Cookie异常: {}", e.getMessage()); 
+            cookieService.clearCookieByPlatformAndUserId("boss", userId, "manual logout");
+            try {
+                playwrightManager.clearBossCookies();
+            } catch (Exception e) {
+                log.warn("清理Boss上下文Cookie异常: {}", e.getMessage());
             }
             response.put("success", true);
             response.put("message", "Boss已退出登录，数据库Cookie和上下文Cookie均已清理");

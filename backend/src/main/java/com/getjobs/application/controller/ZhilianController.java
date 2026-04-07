@@ -121,9 +121,11 @@ public class ZhilianController {
      * 触发智联招聘登录：在未登录时点击二维码入口，等待扫码
      */
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> triggerZhilianLogin() {
+    public ResponseEntity<Map<String, Object>> triggerZhilianLogin(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 设置当前用户ID，登录成功后Cookie将与该用户关联
+            playwrightManager.setCurrentUserId(userId);
             playwrightManager.triggerZhilianLogin();
             response.put("success", true);
             response.put("message", "已尝试打开智联二维码登录入口，请在浏览器扫码登录");
@@ -140,14 +142,14 @@ public class ZhilianController {
      * 退出登录：清空数据库Cookie并清理运行中的上下文Cookie
      */
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logoutZhilian() {
+    public ResponseEntity<Map<String, Object>> logoutZhilian(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
             // 更新登录状态为未登录并触发SSE通知
             playwrightManager.setLoginStatus("zhilian", false);
 
             // 清空数据库中 智联招聘 平台的所有 Cookie 值
-            cookieService.clearCookieByPlatform("zhilian", "manual logout");
+            cookieService.clearCookieByPlatformAndUserId("zhilian", userId, "manual logout");
 
             // 清理运行中的上下文Cookie
             try {
@@ -173,13 +175,14 @@ public class ZhilianController {
      * 调试接口：读取数据库中的 智联招聘 Cookie 记录
      */
     @GetMapping("/cookie")
-    public ResponseEntity<Map<String, Object>> getZhilianCookieRecord() {
+    public ResponseEntity<Map<String, Object>> getZhilianCookieRecord(@RequestAttribute(value = "userId", required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
         try {
-            CookieEntity cookie = cookieService.getCookieByPlatform("zhilian");
+            CookieEntity cookie = cookieService.getCookieByPlatformAndUserId("zhilian", userId);
             Map<String, Object> data = new HashMap<>();
             if (cookie != null) {
                 data.put("id", cookie.getId());
+                data.put("userId", cookie.getUserId());
                 data.put("platform", cookie.getPlatform());
                 data.put("cookie_value", cookie.getCookieValue());
                 data.put("remark", cookie.getRemark());
@@ -275,6 +278,9 @@ public class ZhilianController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 设置当前用户ID（触发Cookie重新加载）
+            playwrightManager.setCurrentUserId(userId);
+
             // 计费检查
             if (userId != null) {
                 Map<String, Object> billingCheck = billingService.checkBeforeDelivery(userId);

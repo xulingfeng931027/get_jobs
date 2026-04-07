@@ -42,4 +42,10 @@ public interface UserBalanceMapper extends BaseMapper<UserBalanceEntity> {
      */
     @Update("UPDATE user_balance SET subscription_end_date = #{endDate}, updated_at = NOW() WHERE user_id = #{userId}")
     int updateSubscriptionEndDate(@Param("userId") Long userId, @Param("endDate") java.time.LocalDateTime endDate);
+
+    /**
+     * 更新套餐已用投递次数
+     */
+    @Update("UPDATE user_balance SET package_used_count = #{count}, updated_at = NOW() WHERE user_id = #{userId}")
+    int updatePackageUsedCount(@Param("userId") Long userId, @Param("count") int count);
 }

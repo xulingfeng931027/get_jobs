@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author loks666
- * 项目链接: <a href="https://github.com/loks666/get_jobs">https://github.com/loks666/get_jobs</a>
+ * @author xulingfeng
+ * 项目链接: <a href="https://github.com/xulingfeng/get_jobs">https://github.com/xulingfeng/get_jobs</a>
  *
  * Boss配置数据类
  * 配置加载由 BossConfigLoaderService 负责

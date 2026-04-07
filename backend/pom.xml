@@ -32,7 +32,6 @@
         <playwright.version>1.51.0</playwright.version>
         <mybatis-plus.version>3.5.9</mybatis-plus.version>
         <sqlite-jdbc.version>3.45.1.0</sqlite-jdbc.version>
-        <freemarker.version>2.3.32</freemarker.version>
         <json.version>20231013</json.version>
         <dotenv-java.version>2.2.0</dotenv-java.version>
         <jakarta.annotation-api.version>2.1.1</jakarta.annotation-api.version>
@@ -107,11 +106,15 @@
             <version>${mybatis-plus.version}</version>
         </dependency>
 
-        <!-- FreeMarker 模板引擎（代码生成器使用） -->
+        <!-- FreeMarker 模板引擎 + Spring Boot Jakarta EE 9+ 支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-freemarker</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
             <artifactId>freemarker</artifactId>
-            <version>${freemarker.version}</version>
+            <version>2.3.33</version>
         </dependency>
 
         <!-- org.json -->
@@ -139,6 +142,12 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
+        <!-- Spring Data Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
         <!-- JWT (Java JWT) -->

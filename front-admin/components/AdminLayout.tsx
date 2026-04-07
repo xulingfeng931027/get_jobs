@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Package
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -29,12 +30,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     const user = localStorage.getItem("admin_username");
-    if (!token && pathname !== "/login") {
+
+    if (pathname === "/login") {
+      // 已登录用户访问登录页，跳转到后台首页
+      if (token) {
+        router.push("/dashboard");
+      }
+      return;
+    }
+
+    if (!token) {
       router.push("/login");
+      return;
     }
-    if (user) {
-      setUsername(user);
+
+    // 有 token 但没有用户名，也跳转登录
+    if (!user) {
+      router.push("/login");
+      return;
     }
+
+    setUsername(user);
   }, [pathname, router]);
 
   const handleLogout = () => {
@@ -46,6 +62,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const navigation = [
     { name: "数据仪表盘", href: "/dashboard", icon: LayoutDashboard },
     { name: "用户管理", href: "/users", icon: Users },
+    { name: "套餐管理", href: "/package", icon: Package },
     { name: "充值码管理", href: "/recharge", icon: CreditCard },
     { name: "系统设置", href: "/settings", icon: Settings },
   ];

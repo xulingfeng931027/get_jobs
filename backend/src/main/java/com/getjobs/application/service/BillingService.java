@@ -26,11 +26,15 @@ public class BillingService {
     @Autowired
     private ConsumptionLogMapper consumptionLogMapper;
 
+    @Autowired
+    private PackageService packageService;
+
     /**
-     * 投递前检查 - 验证用户是否有足够的余额或有效订阅
+     * 投递前检查 - 验证用户是否有足够的余额或有效套餐
+     * 套餐优先于额度限制
      *
      * @param userId 用户ID
-     * @return 检查结果 {allowed: boolean, reason: String, applicationCount: int, hasSubscription: boolean}
+     * @return 检查结果 {allowed: boolean, reason: String, applicationCount: int, hasSubscription: boolean, hasPackage: boolean}
      */
     public Map<String, Object> checkBeforeDelivery(Long userId) {
         Map<String, Object> result = new HashMap<>();
@@ -42,17 +46,39 @@ public class BillingService {
             result.put("reason", "用户账户不存在，请先注册");
             result.put("applicationCount", 0);
             result.put("hasSubscription", false);
+            result.put("hasPackage", false);
             return result;
         }
 
         int applicationCount = balance.getApplicationCount() != null ? balance.getApplicationCount() : 0;
         boolean hasSubscription = hasActiveSubscription(balance);
+        boolean hasPackage = packageService.hasActivePackage(userId);
 
         result.put("applicationCount", applicationCount);
         result.put("hasSubscription", hasSubscription);
+        result.put("hasPackage", hasPackage);
         result.put("subscriptionEndDate", balance.getSubscriptionEndDate());
 
-        // 检查是否有足够的次数或有效订阅
+        // 优先检查套餐
+        if (hasPackage) {
+            if (packageService.canDeliver(userId)) {
+                result.put("allowed", true);
+                result.put("reason", "套餐中");
+                // 返回套餐剩余次数
+                var pkg = packageService.getCurrentPackage(userId);
+                if (pkg != null) {
+                    int remaining = pkg.getTotalCount() == -1 ? -1 : pkg.getTotalCount() - pkg.getUsedCount();
+                    result.put("packageRemainingCount", remaining);
+                    result.put("packageEndDate", pkg.getEndDate());
+                }
+            } else {
+                result.put("allowed", false);
+                result.put("reason", "套餐次数已用完");
+            }
+            return result;
+        }
+
+        // 无套餐，检查订阅或余额
         if (applicationCount > 0 || hasSubscription) {
             result.put("allowed", true);
             result.put("reason", "");
@@ -66,7 +92,7 @@ public class BillingService {
 
     /**
      * 投递后扣费 - 扣减用户投递次数
-     * 仅在余额充足或有效订阅时扣费
+     * 有套餐时只记录次数不扣费，套餐优先于额度限制
      *
      * @param userId 用户ID
      * @param count 投递数量
@@ -87,7 +113,17 @@ public class BillingService {
             return false;
         }
 
-        // 有订阅则不扣费
+        // 优先使用套餐 - 套餐期间只记录次数，不扣费
+        if (packageService.hasActivePackage(userId)) {
+            boolean recorded = packageService.recordDelivery(userId);
+            if (recorded) {
+                log.info("[计费] 用户{}使用套餐记录投递：平台={}, 投递数={}",
+                    userId, platform, count);
+            }
+            return recorded;
+        }
+
+        // 无套餐，检查订阅是否有效
         if (hasActiveSubscription(balance)) {
             log.info("[计费] 用户{}有有效订阅（到期：{}），不扣费，投递平台：{}",
                 userId, balance.getSubscriptionEndDate(), platform);
