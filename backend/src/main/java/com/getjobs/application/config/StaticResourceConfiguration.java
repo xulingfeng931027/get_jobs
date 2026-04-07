@@ -3,11 +3,13 @@ package com.getjobs.application.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -19,6 +21,7 @@ import java.nio.file.Paths;
 /**
  * 静态资源配置
  * 配置前端静态资源的访问路径
+ * JAR包部署时跳过静态资源服务，由nginx等反向代理处理
  */
 @Slf4j
 @Configuration
@@ -27,6 +30,12 @@ public class StaticResourceConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // JAR包部署时跳过静态资源服务
+        if (isJarDeployment()) {
+            log.info("检测到JAR包部署，跳过静态资源服务");
+            return;
+        }
+
         // 检查前端服务是否运行
         boolean hasFrontendService = detectFrontendService();
 
@@ -101,6 +110,31 @@ public class StaticResourceConfiguration implements WebMvcConfigurer {
         } else {
             log.warn("未找到静态资源目录 (dist 或 static)");
         }
+    }
+
+    /**
+     * 检测是否为JAR包部署
+     */
+    private boolean isJarDeployment() {
+        // 检查 java.class.path 是否包含 .jar
+        String jarPath = System.getProperty("java.class.path");
+        if (StringUtils.hasText(jarPath) && jarPath.contains(".jar")) {
+            return true;
+        }
+
+        // 备用检查：检查 ProtectionDomain 的 CodeSource
+        try {
+            File thisFile = new File(StaticResourceConfiguration.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            // 如果是文件且路径包含 .jar 则为 JAR 部署
+            if (thisFile.getName().endsWith(".jar")) {
+                return true;
+            }
+        } catch (Exception e) {
+            log.debug("JAR部署检测失败: {}", e.getMessage());
+        }
+
+        return false;
     }
 
     /**

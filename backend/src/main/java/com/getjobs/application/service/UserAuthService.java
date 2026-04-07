@@ -9,16 +9,19 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 用户认证服务
@@ -32,10 +35,14 @@ public class UserAuthService {
     private UserMapper userMapper;
     @Autowired
     private UserBalanceMapper userBalanceMapper;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
     @Value("${user.jwt.secret:GetJobs-User-Secret-Key-2026!@#$}")
     private String jwtSecret;
     @Value("${user.jwt.expiration:604800000}")
     private long jwtExpiration;
+    private static final String SESSION_PREFIX = "user_session:";
+    private static final Duration SESSION_TTL = Duration.ofDays(7);
 
     /**
      * 用户注册
@@ -154,11 +161,22 @@ public class UserAuthService {
         // 生成 JWT Token
         String token = generateToken(user.getId(), user.getUsername());
 
+        // 生成 Redis Session 并存储登录态
+        String sessionId = UUID.randomUUID().toString();
+        String sessionKey = SESSION_PREFIX + sessionId;
+        Map<String, String> sessionData = new HashMap<>();
+        sessionData.put("userId", String.valueOf(user.getId()));
+        sessionData.put("username", user.getUsername());
+        sessionData.put("loginTime", LocalDateTime.now().toString());
+        redisTemplate.opsForHash().putAll(sessionKey, sessionData);
+        redisTemplate.expire(sessionKey, SESSION_TTL);
+
         log.info("[用户登录] 用户{}登录成功", username);
 
         result.put("success", true);
         result.put("message", "登录成功");
         result.put("token", token);
+        result.put("sessionId", sessionId);
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
         result.put("email", user.getEmail());
@@ -306,5 +324,40 @@ public class UserAuthService {
         result.put("message", "密码修改成功");
 
         return result;
+    }
+
+    /**
+     * 根据sessionId获取用户ID
+     * @param sessionId 会话ID
+     * @return userId，如果session无效返回null
+     */
+    public Long getUserIdBySession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return null;
+        }
+        String sessionKey = SESSION_PREFIX + sessionId;
+        Object userIdObj = redisTemplate.opsForHash().get(sessionKey, "userId");
+        if (userIdObj == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(userIdObj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 根据sessionId删除会话（登出）
+     * @param sessionId 会话ID
+     * @return 是否删除成功
+     */
+    public boolean invalidateSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return false;
+        }
+        String sessionKey = SESSION_PREFIX + sessionId;
+        Boolean result = redisTemplate.delete(sessionKey);
+        return result != null && result;
     }
 }
