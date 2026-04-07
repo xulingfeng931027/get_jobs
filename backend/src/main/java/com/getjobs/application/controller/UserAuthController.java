@@ -1,7 +1,10 @@
 package com.getjobs.application.controller;
 
 import com.getjobs.application.service.BillingService;
+import com.getjobs.application.service.DeviceService;
 import com.getjobs.application.service.UserAuthService;
+import com.getjobs.worker.utils.MachineIdProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,12 +15,16 @@ import java.util.Map;
 /**
  * 用户认证控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/user")
 public class UserAuthController {
 
     @Autowired
     private UserAuthService userAuthService;
+
+    @Autowired
+    private DeviceService deviceService;
 
     @Autowired
     private BillingService billingService;
@@ -156,11 +163,47 @@ public class UserAuthController {
         }
 
         result = userAuthService.changePassword(userId, oldPassword, newPassword);
-        
+
         if ((Boolean) result.get("success")) {
             return ResponseEntity.ok(result);
         } else {
             return ResponseEntity.badRequest().body(result);
         }
+    }
+
+    /**
+     * 用户登出（同时解绑当前设备）
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout(
+            @RequestAttribute(value = "userId", required = false) Long userId,
+            @RequestBody Map<String, String> request) {
+        Map<String, Object> result = new HashMap<>();
+        if (userId == null) {
+            result.put("success", false);
+            result.put("message", "未登录");
+            return ResponseEntity.status(401).body(result);
+        }
+
+        String sessionId = request.get("sessionId");
+        String machineId = MachineIdProvider.getMachineId();
+
+        // 1. 使 session 失效
+        if (sessionId != null && !sessionId.isBlank()) {
+            userAuthService.invalidateSession(sessionId);
+        }
+
+        // 2. 解绑当前设备（释放设备槽位）
+        boolean unbound = deviceService.unbindDevice(userId, machineId);
+        if (unbound) {
+            log.info("[用户登出] 用户{}已解绑设备: {}", userId, machineId);
+            result.put("deviceUnbound", true);
+        } else {
+            result.put("deviceUnbound", false);
+        }
+
+        result.put("success", true);
+        result.put("message", "登出成功");
+        return ResponseEntity.ok(result);
     }
 }
