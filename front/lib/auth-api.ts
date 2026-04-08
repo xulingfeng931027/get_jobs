@@ -38,7 +38,7 @@ export function setUserInfo(info: any) {
 }
 
 // 通用请求函数
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

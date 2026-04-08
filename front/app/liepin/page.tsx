@@ -13,6 +13,7 @@ import AnalysisContent from '@/app/liepin/analysis/AnalysisContent'
 import PageHeader from '@/app/components/PageHeader'
 import CommonOptionSelector from '@/app/components/CommonOptionSelector'
 import {API_PATHS} from '@/lib/api-config'
+import {getToken, request} from '@/lib/auth-api'
 
 interface LiepinConfig {
   id?: number
@@ -200,8 +201,12 @@ export default function LiepinPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
+      const token = getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(API_PATHS.liepin.start, {
         method: 'POST',
+        headers,
       })
       const data = await response.json()
 
@@ -221,8 +226,12 @@ export default function LiepinPage() {
 
   const handleStopDelivery = async () => {
     try {
+      const token = getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const response = await fetch(API_PATHS.liepin.stop, {
         method: 'POST',
+        headers,
       })
       const data = await response.json()
 
@@ -241,7 +250,10 @@ export default function LiepinPage() {
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch(API_PATHS.liepin.logout, { method: 'POST' })
+      const token = getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const response = await fetch(API_PATHS.liepin.logout, { method: 'POST', headers })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)

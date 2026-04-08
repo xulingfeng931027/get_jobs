@@ -1,5 +1,6 @@
 package com.getjobs.worker.service;
 
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.ConfigService;
 import com.getjobs.worker.dto.JobProgressMessage;
 import com.getjobs.worker.liepin.Liepin;
@@ -29,6 +30,7 @@ public class LiepinJobService implements JobPlatformService {
     private final PlaywrightManager playwrightManager;
     private final ConfigService configService;
     private final ObjectProvider<Liepin> liepinProvider;
+    private final ObjectProvider<BillingService> billingServiceProvider;
 
     // 运行状态标志
     private volatile boolean isRunning = false;
@@ -81,6 +83,17 @@ public class LiepinJobService implements JobPlatformService {
             liepin.setConfig(config);
             liepin.setProgressCallback(cb);
             liepin.setShouldStopCallback(this::shouldStop);
+
+            // 投递前计费检查（Playwright 点击前拦截）
+            Long userId = playwrightManager.getCurrentUserId();
+            if (userId != null) {
+                BillingService billingService = billingServiceProvider.getObject();
+                Map<String, Object> check = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) check.get("allowed")) {
+                    progressCallback.accept(JobProgressMessage.error(PLATFORM, (String) check.get("reason")));
+                    return 0;
+                }
+            }
 
             int deliveredCount = liepin.execute();
 

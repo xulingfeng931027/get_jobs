@@ -3,12 +3,11 @@
 import Link from 'next/link'
 import {usePathname} from 'next/navigation'
 import {useEffect, useState} from 'react'
-import {BiBrain, BiBriefcase, BiCog, BiEnvelope, BiMoon, BiSearch, BiSun, BiTask, BiUserCircle, BiLogIn, BiUserPlus, BiDollar, BiUser} from 'react-icons/bi'
+import {BiBrain, BiBriefcase, BiCog, BiEnvelope, BiMoon, BiSearch, BiSun, BiTask, BiUserCircle, BiLogIn, BiDollar, BiUser} from 'react-icons/bi'
 import {motion} from 'framer-motion'
 import {useTheme} from 'next-themes'
 import {API_PATHS} from '@/lib/api-config'
 import { useUser } from '@/lib/auth-context'
-import { getToken } from '@/lib/auth-api'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -84,14 +83,14 @@ export default function Sidebar() {
       initial={{ x: -100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className="fixed left-0 top-0 h-full w-64 bg-card dark:bg-card shadow-bento z-50 border-r border-border"
+      className="fixed left-0 top-0 h-full w-64 bg-card dark:bg-card shadow-bento z-50 border-r border-border flex flex-col"
     >
       {/* 侧边栏头部 */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="p-6 border-b border-border"
+        className="p-6 border-b border-border shrink-0"
       >
         <div className="flex items-center gap-3 mb-2">
           <span className="text-4xl leading-none">🔍</span>
@@ -149,8 +148,8 @@ export default function Sidebar() {
         )}
       </motion.div>
 
-      {/* 导航菜单 */}
-      <nav className="p-4 space-y-4 overflow-y-auto h-[calc(100vh-280px)]">
+      {/* 导航菜单 - flex-1 占满剩余空间 */}
+      <nav className="flex-1 p-4 overflow-y-auto min-h-0">
         {/* 未登录时显示提示信息 */}
         {!isAuthenticated && (
           <div className="text-center py-8">
@@ -202,7 +201,7 @@ export default function Sidebar() {
             </div>
 
             {/* 平台配置分组 */}
-            <div>
+            <div className="mt-6">
               <div className="px-4 py-2 text-muted-foreground text-xs uppercase tracking-wide">平台配置</div>
               <div className="space-y-2">
                 {platformGroup.map((item, index) => {
@@ -242,22 +241,35 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* 底部信息 */}
+      {/* 底部信息 - shrink-0 不压缩 */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.5 }}
-        className="absolute bottom-0 left-0 right-0 p-4 border-t border-border"
+        className="shrink-0 p-4 border-t border-border"
       >
         {/* 用户状态 */}
         {isAuthenticated && user ? (
           <div className="mb-3">
-            <div className="flex items-center justify-between text-foreground text-sm mb-2">
-              <span>{user.username}</span>
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                {billing?.applicationCount ?? 0} 次
-              </span>
-            </div>
+            {/* 订阅有效期提示（优先级高于次数展示） */}
+            {billing?.hasSubscription && billing?.subscriptionEndDate ? (
+              <div className="mb-2 text-xs bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border border-green-500/20 px-3 py-2 rounded-lg">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-green-600 dark:text-green-400 font-medium">VIP 会员</span>
+                  <span className="text-green-600 dark:text-green-400">
+                    剩余 {Math.max(0, Math.ceil((new Date(billing.subscriptionEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} 天
+                  </span>
+                </div>
+                <div className="text-green-600/70 dark:text-green-400/70">
+                  到期: {new Date(billing.subscriptionEndDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+              </div>
+            ) : (
+              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground px-3 py-1.5 rounded-lg bg-muted/50">
+                <span>剩余投递</span>
+                <span className="font-medium text-foreground">{billing?.applicationCount ?? 0} 次</span>
+              </div>
+            )}
             {/* 用户管理 */}
             <Link
               href="/user/profile"
@@ -281,9 +293,6 @@ export default function Sidebar() {
             >
               <BiDollar className="text-lg" />
               <span>账户充值</span>
-              {billing?.hasSubscription && (
-                <span className="ml-auto text-xs bg-green-500 px-1.5 py-0.5 rounded">VIP</span>
-              )}
             </Link>
           </div>
         ) : (

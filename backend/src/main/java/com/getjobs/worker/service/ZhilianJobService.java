@@ -1,5 +1,6 @@
 package com.getjobs.worker.service;
 
+import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.ConfigService;
 import com.getjobs.worker.dto.JobProgressMessage;
 import com.getjobs.worker.manager.PlaywrightManager;
@@ -28,6 +29,7 @@ public class ZhilianJobService implements JobPlatformService {
     private final PlaywrightManager playwrightManager;
     private final ObjectProvider<ZhiLian> zhilianProvider;
     private final ConfigService configService;
+    private final ObjectProvider<BillingService> billingServiceProvider;
 
     // 任务运行状态
     private volatile boolean isRunning = false;
@@ -83,6 +85,17 @@ public class ZhilianJobService implements JobPlatformService {
             zhilian.setProgressCallback(zhilianCallback);
             zhilian.setShouldStopCallback(this::shouldStop);
             zhilian.prepare();
+
+            // 投递前计费检查（Playwright 点击前拦截）
+            Long userId = playwrightManager.getCurrentUserId();
+            if (userId != null) {
+                BillingService billingService = billingServiceProvider.getObject();
+                Map<String, Object> check = billingService.checkBeforeDelivery(userId);
+                if (!(Boolean) check.get("allowed")) {
+                    progressCallback.accept(JobProgressMessage.error(PLATFORM, (String) check.get("reason")));
+                    return 0;
+                }
+            }
 
             int deliveredCount = zhilian.execute();
 
