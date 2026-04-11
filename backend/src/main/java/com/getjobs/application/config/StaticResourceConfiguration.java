@@ -2,14 +2,13 @@ package com.getjobs.application.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -21,7 +20,6 @@ import java.nio.file.Paths;
 /**
  * 静态资源配置
  * 配置前端静态资源的访问路径
- * JAR包部署时跳过静态资源服务，由nginx等反向代理处理
  */
 @Slf4j
 @Configuration
@@ -30,21 +28,22 @@ public class StaticResourceConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // JAR包部署时跳过静态资源服务
-        if (isJarDeployment()) {
-            log.info("检测到JAR包部署，跳过静态资源服务");
-            return;
-        }
-
         // 检查前端服务是否运行
         boolean hasFrontendService = detectFrontendService();
 
-        // 检查静态资源路径
+        // 检查静态资源路径（文件系统）
         Path distPath = Paths.get("src/main/resources/dist");
         Path staticPath = Paths.get("src/main/resources/static");
 
-        boolean hasDistResources = Files.exists(distPath);
-        boolean hasStaticResources = Files.exists(staticPath);
+        boolean hasFileSystemDist = Files.exists(distPath);
+        boolean hasFileSystemStatic = Files.exists(staticPath);
+
+        // 检查 classpath 中的资源（适用于 JAR 包部署）
+        boolean hasClasspathDist = hasClasspathResource("/dist/");
+        boolean hasClasspathStatic = hasClasspathResource("/static/");
+
+        boolean hasDistResources = hasFileSystemDist || hasClasspathDist;
+        boolean hasStaticResources = hasFileSystemStatic || hasClasspathStatic;
 
         if (hasDistResources || hasStaticResources) {
             log.info("配置静态资源服务:");
@@ -53,11 +52,15 @@ public class StaticResourceConfiguration implements WebMvcConfigurer {
             if (hasFrontendService) {
                 log.info(" 使用前端开发服务 (端口 {})", FRONTEND_PORT);
             } else {
-                if (hasDistResources) {
-                    log.info("使用 dist 目录: {}", distPath.toAbsolutePath());
+                if (hasFileSystemDist) {
+                    log.info("使用文件系统 dist 目录: {}", distPath.toAbsolutePath());
+                } else if (hasClasspathDist) {
+                    log.info("使用 classpath dist 资源 (JAR包内)");
                 }
-                if (hasStaticResources) {
-                    log.info("使用 static 目录: {}", staticPath.toAbsolutePath());
+                if (hasFileSystemStatic) {
+                    log.info("使用文件系统 static 目录: {}", staticPath.toAbsolutePath());
+                } else if (hasClasspathStatic) {
+                    log.info("使用 classpath static 资源 (JAR包内)");
                 }
             }
 
@@ -113,28 +116,11 @@ public class StaticResourceConfiguration implements WebMvcConfigurer {
     }
 
     /**
-     * 检测是否为JAR包部署
+     * 检查 classpath 中是否存在资源
      */
-    private boolean isJarDeployment() {
-        // 检查 java.class.path 是否包含 .jar
-        String jarPath = System.getProperty("java.class.path");
-        if (StringUtils.hasText(jarPath) && jarPath.contains(".jar")) {
-            return true;
-        }
-
-        // 备用检查：检查 ProtectionDomain 的 CodeSource
-        try {
-            File thisFile = new File(StaticResourceConfiguration.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI());
-            // 如果是文件且路径包含 .jar 则为 JAR 部署
-            if (thisFile.getName().endsWith(".jar")) {
-                return true;
-            }
-        } catch (Exception e) {
-            log.debug("JAR部署检测失败: {}", e.getMessage());
-        }
-
-        return false;
+    private boolean hasClasspathResource(String path) {
+        ClassPathResource resource = new ClassPathResource(path);
+        return resource.exists();
     }
 
     /**

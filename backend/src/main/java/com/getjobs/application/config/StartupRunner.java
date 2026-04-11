@@ -20,11 +20,13 @@ import java.net.URI;
 @Component
 public class StartupRunner implements ApplicationRunner {
 
+    @Value("${server.port:8888}")
+    private int backendPort;
+
     private static final int FRONTEND_PORT = 6866;
     private static final String FRONTEND_URL = "http://localhost:" + FRONTEND_PORT;
     private static final String BACKEND_URL = "http://localhost:";
-    @Value("${server.port:8888}")
-    private int backendPort;
+
     @Autowired
     private PlaywrightManager playwrightManager;
 

@@ -59,3 +59,4 @@ dist/
 .gradle/
 node_modules
 /front/out/
+/logs/

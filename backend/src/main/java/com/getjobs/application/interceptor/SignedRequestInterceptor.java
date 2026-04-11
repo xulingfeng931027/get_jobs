@@ -25,7 +25,7 @@ import java.util.UUID;
 public class SignedRequestInterceptor implements ClientHttpRequestInterceptor {
 
     private final SecureRandom random = new SecureRandom();
-    @Value("${secure.api.key:}")
+    @Value("${ai.api.key:}")
     private String apiKey;
 
     @Override

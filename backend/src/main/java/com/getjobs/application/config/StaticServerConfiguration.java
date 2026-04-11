@@ -6,6 +6,7 @@ import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactor
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -23,8 +24,7 @@ import java.nio.file.Paths;
 @Configuration
 public class StaticServerConfiguration {
     private static final int FRONTEND_PORT = 6866;
-    private static final String DIST_PATH = "src/main/resources/dist";
-    private static final String STATIC_PATH = "src/main/resources/static";
+    private static final String DIST_PATH = "/backend/src/main/resources/dist";
 
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> servletContainer() {
@@ -46,6 +46,8 @@ public class StaticServerConfiguration {
 
                 Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
                 connector.setPort(FRONTEND_PORT);
+                connector.setProperty("address", "0.0.0.0");
+
                 server.addAdditionalTomcatConnectors(connector);
             } else {
                 log.warn("未检测到前端开发服务，也未找到静态资源");
@@ -96,19 +98,17 @@ public class StaticServerConfiguration {
      */
     private boolean checkStaticResources() {
         Path distPath = Paths.get(DIST_PATH);
-        Path staticPath = Paths.get(STATIC_PATH);
 
         log.info("检查静态资源路径:");
-        log.info("  dist路径: {} (绝对路径: {})", DIST_PATH, distPath.toAbsolutePath());
-        log.info("  static路径: {} (绝对路径: {})", STATIC_PATH, staticPath.toAbsolutePath());
+        log.info("  文件系统 dist路径: {} (绝对路径: {})", DIST_PATH, distPath.toAbsolutePath());
 
-        boolean hasDist = hasContent(distPath);
-        boolean hasStatic = hasContent(staticPath);
+        boolean hasFileSystemDist = hasContent(distPath);
+        boolean hasClasspathDist = hasClasspathResource("/dist/");
 
-        log.info("  dist存在: {}", hasDist);
-        log.info("  static存在: {}", hasStatic);
+        log.info("  文件系统 dist存在: {}", hasFileSystemDist);
+        log.info("  classpath dist存在: {}", hasClasspathDist);
 
-        return hasDist || hasStatic;
+        return hasFileSystemDist || hasClasspathDist;
     }
 
     /**
@@ -122,6 +122,19 @@ public class StaticServerConfiguration {
             return Files.list(path).findAny().isPresent();
         } catch (IOException e) {
             log.error("检查路径失败: {}", path, e);
+            return false;
+        }
+    }
+
+    /**
+     * 检查 classpath 中是否存在资源（用于 JAR 包部署）
+     */
+    private boolean hasClasspathResource(String path) {
+        try {
+            ClassPathResource resource = new ClassPathResource(path);
+            return resource.exists();
+        } catch (Exception e) {
+            log.debug("检查 classpath 资源失败: {}", path);
             return false;
         }
     }

@@ -56,11 +56,6 @@ public class MachineIdProvider {
             }
 
             // 2. 获取机器序列号
-            String serialNumber = getMachineSerialNumber();
-            if (serialNumber != null && !serialNumber.isBlank()) {
-                identifiers.add(serialNumber);
-                log.debug("[MachineId] 序列号: {}", serialNumber);
-            }
 
             // 3. 如果都获取失败，使用备选方案（机器名 + 用户名 + 随机数种子）
             if (identifiers.isEmpty()) {
@@ -108,7 +103,7 @@ public class MachineIdProvider {
 
             if (!macs.isEmpty()) {
                 // 返回第一个有效的 MAC（通常是有线网卡或主要无线网卡）
-                return macs.get(0);
+                return macs.getFirst();
             }
         } catch (Exception e) {
             log.debug("[MachineId] 获取MAC地址失败: {}", e.getMessage());
