@@ -1,7 +1,7 @@
 'use client'
 
 import {useEffect, useState} from 'react'
-import {BiCodeAlt, BiInfoCircle, BiKey, BiLinkExternal, BiSave} from 'react-icons/bi'
+import {BiCodeAlt, BiInfoCircle, BiLinkExternal, BiSave} from 'react-icons/bi'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
 import {Input} from '@/components/ui/input'
@@ -14,15 +14,11 @@ export default function EnvConfig() {
   const { showToast } = useToast();
   const [envConfig, setEnvConfig] = useState({
     hookUrl: '',
-    baseUrl: '',
-    apiKey: '',
-    model: '',
     botIsSend: 0,
     dingtalkHookUrl: '',
     dingtalkIsSend: 0,
   })
 
-  const [showApiKey, setShowApiKey] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -48,9 +44,6 @@ export default function EnvConfig() {
       if (result.success && result.data) {
         setEnvConfig({
           hookUrl: result.data.HOOK_URL || '',
-          baseUrl: result.data.BASE_URL || '',
-          apiKey: result.data.API_KEY || '',
-          model: result.data.MODEL || '',
           botIsSend: (() => {
             const raw = result.data.BOT_IS_SEND
             const val = String(raw ?? '').trim().toLowerCase()
@@ -82,9 +75,6 @@ export default function EnvConfig() {
 
       const configMap = {
         HOOK_URL: envConfig.hookUrl,
-        BASE_URL: envConfig.baseUrl,
-        API_KEY: envConfig.apiKey,
-        MODEL: envConfig.model,
         BOT_IS_SEND: String(envConfig.botIsSend ?? 0),
         DINGTALK_HOOK_URL: envConfig.dingtalkHookUrl,
         DINGTALK_IS_SEND: String(envConfig.dingtalkIsSend ?? 0),
@@ -128,7 +118,7 @@ export default function EnvConfig() {
       <PageHeader
         icon={<BiCodeAlt className="text-2xl" />}
         title="环境变量配置"
-        subtitle=".env_template 环境变量管理"
+        subtitle="Webhook 通知配置管理"
         actions={
           <Button
             onClick={() => handleSave(false)}
@@ -229,85 +219,7 @@ export default function EnvConfig() {
           </CardContent>
         </Card>
 
-        {/* API 配置 */}
-        <Card className="animate-in fade-in slide-in-from-bottom-6 duration-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BiCodeAlt className="text-primary" />
-              API 配置
-            </CardTitle>
-            <CardDescription>配置 API 服务器地址和使用的 AI 模型</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="baseUrl">API Base URL</Label>
-                <Input
-                  id="baseUrl"
-                  type="text"
-                  value={envConfig.baseUrl}
-                  onChange={(e) => setEnvConfig({ ...envConfig, baseUrl: e.target.value })}
-                  placeholder="https://api.ruyun.fun"
-                />
-                <p className="text-xs text-muted-foreground">API服务器地址</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="model">AI模型</Label>
-                <Input
-                  id="model"
-                  type="text"
-                  value={envConfig.model}
-                  onChange={(e) => setEnvConfig({ ...envConfig, model: e.target.value })}
-                  placeholder="gpt-5-nano-2025-08-07"
-                />
-                <p className="text-xs text-muted-foreground">使用的AI模型名称</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* API 密钥 */}
-        <Card className="animate-in fade-in slide-in-from-bottom-7 duration-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BiKey className="text-primary" />
-              API 密钥
-            </CardTitle>
-            <CardDescription>配置 API 访问密钥，请妥善保管</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  type={showApiKey ? 'text' : 'password'}
-                  value={envConfig.apiKey}
-                  onChange={(e) => setEnvConfig({ ...envConfig, apiKey: e.target.value })}
-                  placeholder="sk-xxxxxxxxxxxxxxxxx"
-                />
-                <Button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
-                  type="button"
-                >
-                  {showApiKey ? '隐藏' : '显示'}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                🔐 API密钥将被安全存储，请妥善保管
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        
-
-        {/* 操作按钮已移至页头右上角 */}
-
-        {/* 保存结果弹框 —— 与 Boss 配置一致样式 */}
+        {/* 保存结果弹框 */}
         {showSaveDialog && saveResult && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" role="dialog" aria-modal="true">
             <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-[92%] max-w-sm border border-gray-200 dark:border-neutral-800 animate-in fade-in zoom-in-95">

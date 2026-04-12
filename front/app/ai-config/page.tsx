@@ -1,9 +1,10 @@
 'use client'
 
 import {useEffect, useState} from 'react'
-import {BiBrain, BiInfoCircle, BiSave} from 'react-icons/bi'
+import {BiBrain, BiCodeAlt, BiInfoCircle, BiKey, BiSave} from 'react-icons/bi'
 import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import {Textarea} from '@/components/ui/textarea'
 import PageHeader from '@/app/components/PageHeader'
@@ -12,19 +13,31 @@ import {useToast} from '@/components/Toast'
 
 export default function AiConfigPage() {
   const { showToast } = useToast();
+
+  // AI 提示词配置
   const [aiConfig, setAiConfig] = useState({
     introduce: '',
     prompt: '',
   })
 
-  const [loading, setLoading] = useState(false)
+  // API 配置
+  const [apiConfig, setApiConfig] = useState({
+    baseUrl: '',
+    apiKey: '',
+    model: '',
+  })
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
   // 是否启用AI（映射 boss_config.enable_ai）
   const [enableAi, setEnableAi] = useState<number>(0)
 
-  // 加载AI配置
+  // 加载配置
   useEffect(() => {
     fetchAiConfig()
     fetchEnableAi()
+    fetchApiConfig()
   }, [])
 
   const fetchAiConfig = async () => {
@@ -51,6 +64,35 @@ export default function AiConfigPage() {
       console.error('加载AI配置失败:', error)
       // 如果加载失败，使用默认值，不影响用户使用
       console.log('使用默认配置')
+    }
+  }
+
+  // 加载 API 配置
+  const fetchApiConfig = async () => {
+    try {
+      const response = await fetch(API_PATHS.config, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('获取配置失败')
+      }
+
+      const result = await response.json()
+      if (result.success && result.data) {
+        setApiConfig({
+          baseUrl: result.data.BASE_URL || '',
+          apiKey: result.data.API_KEY || '',
+          model: result.data.MODEL || '',
+        })
+      }
+    } catch (error) {
+      console.error('加载API配置失败:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -103,10 +145,10 @@ export default function AiConfigPage() {
   }
 
   const handleSave = async () => {
-    setLoading(true)
+    setSaving(true)
     try {
       // 保存AI配置
-      const response = await fetch(API_PATHS.aiConfig, {
+      const aiResponse = await fetch(API_PATHS.aiConfig, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,18 +156,33 @@ export default function AiConfigPage() {
         body: JSON.stringify(aiConfig),
       })
 
-      const result = await response.json()
+      // 保存 API 配置
+      const apiConfigMap = {
+        BASE_URL: apiConfig.baseUrl,
+        API_KEY: apiConfig.apiKey,
+        MODEL: apiConfig.model,
+      }
+      const apiResponse = await fetch(API_PATHS.config, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiConfigMap),
+      })
 
-      if (result.success) {
-        showToast('AI配置已保存！', 'success')
+      const aiResult = await aiResponse.json()
+      const apiResult = await apiResponse.json()
+
+      if (aiResult.success && apiResult.success) {
+        showToast('配置已保存！', 'success')
       } else {
-        showToast('保存失败: ' + result.message, 'error')
+        showToast('保存失败: ' + (aiResult.message || apiResult.message), 'error')
       }
     } catch (error) {
-      console.error('保存AI配置失败:', error)
+      console.error('保存配置失败:', error)
       showToast('保存失败，请检查服务器连接！', 'error')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -134,7 +191,7 @@ export default function AiConfigPage() {
       <PageHeader
         icon={<BiBrain className="text-2xl" />}
         title="AI配置"
-        subtitle="配置AI相关的技能介绍和提示词"
+        subtitle="配置 API 和 AI 提示词"
         iconClass="text-white"
         accentBgClass="bg-purple-500"
         actions={
@@ -151,15 +208,15 @@ export default function AiConfigPage() {
       />
 
       <div className="space-y-6">
-        {/* AI配置 */}
+        {/* API 配置 */}
         <Card className="animate-in fade-in slide-in-from-bottom-5 duration-700">
           <CardHeader className="flex items-start gap-4">
             <div className="min-w-0 space-y-2">
               <CardTitle className="flex items-center gap-2">
-                <BiBrain className="text-primary" />
-                AI配置
+                <BiCodeAlt className="text-primary" />
+                API 配置
               </CardTitle>
-              <CardDescription>配置AI相关的技能介绍和提示词，用于生成个性化求职内容</CardDescription>
+              <CardDescription>配置 API 服务器地址、AI模型和访问密钥</CardDescription>
             </div>
             <div>
               <button
@@ -173,6 +230,69 @@ export default function AiConfigPage() {
                 />
               </button>
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="baseUrl">API Base URL</Label>
+                <Input
+                  id="baseUrl"
+                  type="text"
+                  value={apiConfig.baseUrl}
+                  onChange={(e) => setApiConfig({ ...apiConfig, baseUrl: e.target.value })}
+                  placeholder="https://api.ruyun.fun"
+                />
+                <p className="text-xs text-muted-foreground">API服务器地址</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="model">AI模型</Label>
+                <Input
+                  id="model"
+                  type="text"
+                  value={apiConfig.model}
+                  onChange={(e) => setApiConfig({ ...apiConfig, model: e.target.value })}
+                  placeholder="gpt-5-nano-2025-08-07"
+                />
+                <p className="text-xs text-muted-foreground">使用的AI模型名称</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mt-6">
+              <Label htmlFor="apiKey">API Key</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiConfig.apiKey}
+                  onChange={(e) => setApiConfig({ ...apiConfig, apiKey: e.target.value })}
+                  placeholder="sk-xxxxxxxxxxxxxxxxx"
+                />
+                <Button
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7"
+                  type="button"
+                >
+                  {showApiKey ? '隐藏' : '显示'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                API密钥将被安全存储，请妥善保管
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI提示词配置 */}
+        <Card className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BiBrain className="text-primary" />
+              AI提示词配置
+            </CardTitle>
+            <CardDescription>配置AI相关的技能介绍和提示词，用于生成个性化求职内容</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
