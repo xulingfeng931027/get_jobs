@@ -1780,38 +1780,52 @@ public class PlaywrightManager {
             com.fasterxml.jackson.databind.JsonNode jsonArray = objectMapper.readTree(cookieJson);
 
             for (com.fasterxml.jackson.databind.JsonNode node : jsonArray) {
-                // 创建Cookie对象（name和value是必需的）
-                Cookie cookie = new Cookie(
-                        node.get("name").asText(),
-                        node.get("value").asText()
-                );
+                try {
+                    // 创建Cookie对象（name和value是必需的）
+                    Cookie cookie = new Cookie(
+                            node.get("name").asText(),
+                            node.get("value").asText()
+                    );
 
-                // 设置可选字段
-                if (node.has("domain") && !node.get("domain").isNull()) {
-                    cookie.domain = node.get("domain").asText();
-                }
-                if (node.has("path") && !node.get("path").isNull()) {
-                    cookie.path = node.get("path").asText();
-                }
-                if (node.has("expires") && !node.get("expires").isNull()) {
-                    cookie.expires = node.get("expires").asDouble();
-                }
-                if (node.has("httpOnly") && !node.get("httpOnly").isNull()) {
-                    cookie.httpOnly = node.get("httpOnly").asBoolean();
-                }
-                if (node.has("secure") && !node.get("secure").isNull()) {
-                    cookie.secure = node.get("secure").asBoolean();
-                }
-                if (node.has("sameSite") && !node.get("sameSite").isNull()) {
-                    String sameSite = node.get("sameSite").asText();
-                    if (sameSite != null && !sameSite.isEmpty()) {
-                        cookie.sameSite = com.microsoft.playwright.options.SameSiteAttribute.valueOf(
-                                sameSite.toUpperCase()
-                        );
+                    // 设置可选字段
+                    if (node.has("domain") && !node.get("domain").isNull()) {
+                        cookie.domain = node.get("domain").asText();
                     }
-                }
+                    if (node.has("path") && !node.get("path").isNull()) {
+                        cookie.path = node.get("path").asText();
+                    }
+                    if (node.has("expires") && !node.get("expires").isNull()) {
+                        cookie.expires = node.get("expires").asDouble();
+                    }
+                    if (node.has("httpOnly") && !node.get("httpOnly").isNull()) {
+                        cookie.httpOnly = node.get("httpOnly").asBoolean();
+                    }
+                    if (node.has("secure") && !node.get("secure").isNull()) {
+                        cookie.secure = node.get("secure").asBoolean();
+                    }
+                    if (node.has("sameSite") && !node.get("sameSite").isNull()) {
+                        String sameSite = node.get("sameSite").asText();
+                        if (sameSite != null && !sameSite.isEmpty()) {
+                            try {
+                                cookie.sameSite = com.microsoft.playwright.options.SameSiteAttribute.valueOf(
+                                        sameSite.toUpperCase()
+                                );
+                            } catch (IllegalArgumentException e) {
+                                log.warn("Cookie '{}' 的 sameSite 值 '{}' 无效，跳过该字段", node.get("name").asText(), sameSite);
+                            }
+                        }
+                    }
 
-                cookies.add(cookie);
+                    cookies.add(cookie);
+                } catch (Exception e) {
+                    String cookieName = "<未知>";
+                    try {
+                        cookieName = node.get("name").asText();
+                    } catch (Exception ignored) {
+                    }
+                    log.warn("解析单个Cookie失败: name={}, error={}", cookieName, e.getMessage());
+                    // 单个cookie解析失败不影响其他cookie，继续处理
+                }
             }
 
             log.debug("成功解析Cookie，共 {} 条", cookies.size());
