@@ -88,12 +88,4 @@ public class BossAnalyticsController {
                 filterHeadhunter != null && filterHeadhunter
         );
     }
-
-    /**
-     * 刷新 boss_data（列顺序检查 + VACUUM）
-     */
-    @GetMapping("/reload")
-    public Map<String, Object> reload() {
-        return bossService.reloadBossData();
-    }
 }

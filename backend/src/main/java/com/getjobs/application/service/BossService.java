@@ -535,91 +535,6 @@ public class BossService {
         return blacklistMapper.selectList(null);
     }
 
-    /**
-     * 确保 boss_data 表的列顺序以 encrypt_id、encrypt_user_id 开头。
-     * 若不满足，则进行一次在线迁移：创建新表、复制数据、替换旧表。
-     */
-    public void ensureBossDataColumnOrder() {
-        java.sql.Connection conn = null;
-        try {
-            conn = dataSource.getConnection();
-            // MySQL 不需要 SQLite 特有的迁移逻辑
-            String dbProduct = conn.getMetaData().getDatabaseProductName();
-            if (dbProduct != null && dbProduct.toLowerCase().contains("mysql")) return;
-            try (java.sql.Statement stmt = conn.createStatement()) {
-                java.util.List<String> cols = new java.util.ArrayList<>();
-                try (java.sql.ResultSet rs = stmt.executeQuery("PRAGMA table_info('boss_data')")) {
-                    while (rs.next()) {
-                        cols.add(rs.getString("name"));
-                    }
-                }
-                if (cols.isEmpty()) return; // 表不存在或无列
-                boolean needMigrate = true;
-                if (cols.size() >= 3) {
-                    String c0 = cols.get(0) == null ? "" : cols.get(0).toLowerCase();
-                    String c1 = cols.get(1) == null ? "" : cols.get(1).toLowerCase();
-                    String c2 = cols.get(2) == null ? "" : cols.get(2).toLowerCase();
-                    // 允许第一列是 id 或 encrypt_id，但要求前两列满足 encrypt_id、encrypt_user_id 顺序
-                    if ("id".equals(c0) && "encrypt_id".equals(c1) && "encrypt_user_id".equals(c2)) {
-                        needMigrate = false;
-                    } else if ("encrypt_id".equals(c0) && "encrypt_user_id".equals(c1)) {
-                        needMigrate = false;
-                    }
-                }
-                if (!needMigrate) return;
-
-                stmt.execute("BEGIN TRANSACTION");
-                // 新表：将 encrypt_id、encrypt_user_id 移到最前（紧随 id）
-                String createSql = "CREATE TABLE boss_data_new (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        "encrypt_id TEXT, " +
-                        "encrypt_user_id TEXT, " +
-                        "company_name TEXT, " +
-                        "job_name TEXT, " +
-                        "salary TEXT, " +
-                        "location TEXT, " +
-                        "experience TEXT, " +
-                        "degree TEXT, " +
-                        "hr_name TEXT, " +
-                        "hr_position TEXT, " +
-                        "hr_active_status TEXT, " +
-                        "delivery_status TEXT, " +
-                        "job_description TEXT, " +
-                        "job_url TEXT, " +
-                        "recruitment_status TEXT, " +
-                        "company_address TEXT, " +
-                        "industry TEXT, " +
-                        "introduce TEXT, " +
-                        "financing_stage TEXT, " +
-                        "company_scale TEXT, " +
-                        "created_at TEXT, " +
-                        "updated_at TEXT" +
-                        ")";
-                stmt.execute(createSql);
-
-                String copySql = "INSERT INTO boss_data_new (" +
-                        "id, encrypt_id, encrypt_user_id, company_name, job_name, salary, location, experience, degree, " +
-                        "hr_name, hr_position, hr_active_status, delivery_status, job_description, job_url, recruitment_status, " +
-                        "company_address, industry, introduce, financing_stage, company_scale, created_at, updated_at" +
-                        ") SELECT " +
-                        "id, encrypt_id, encrypt_user_id, company_name, job_name, salary, location, experience, degree, " +
-                        "hr_name, hr_position, hr_active_status, delivery_status, job_description, job_url, recruitment_status, " +
-                        "company_address, industry, introduce, financing_stage, company_scale, created_at, updated_at " +
-                        "FROM boss_data";
-                stmt.execute(copySql);
-
-                stmt.execute("DROP TABLE boss_data");
-                stmt.execute("ALTER TABLE boss_data_new RENAME TO boss_data");
-                stmt.execute("COMMIT");
-                log.info("已调整 boss_data 表列顺序：将 encrypt_id、encrypt_user_id 前置");
-            }
-        } catch (Exception e) {
-            log.warn("调整 boss_data 列顺序失败：{}", e.getMessage());
-            try { if (conn != null) conn.createStatement().execute("ROLLBACK"); } catch (Exception ignore) {}
-        } finally {
-            try { if (conn != null) conn.close(); } catch (Exception ignore) {}
-        }
-    }
 
     /**
      * 判断岗位是否已存在（相同 encrypt_id AND encrypt_user_id）
@@ -1033,33 +948,6 @@ public class BossService {
         result.page = page;
         result.size = size;
         return result;
-    }
-
-    /**
-     * 刷新数据：执行列顺序检查，并执行 VACUUM 以优化数据库；返回当前总数
-     */
-    public Map<String, Object> reloadBossData() {
-        Map<String, Object> resp = new HashMap<>();
-        Connection conn = null;
-        try {
-            ensureBossDataColumnOrder();
-            conn = dataSource.getConnection();
-            try (Statement st = conn.createStatement()) {
-                try { st.execute("PRAGMA wal_checkpoint(TRUNCATE)"); } catch (Exception ignore) {}
-                try { st.execute("VACUUM"); } catch (Exception ignore) {}
-            }
-            long total = scalarCount(conn, "SELECT COUNT(*) FROM boss_data");
-            resp.put("success", true);
-            resp.put("message", "刷新完成");
-            resp.put("total", total);
-        } catch (Exception e) {
-            log.warn("刷新boss_data失败: {}", e.getMessage());
-            resp.put("success", false);
-            resp.put("message", "刷新失败: " + e.getMessage());
-        } finally {
-            try { if (conn != null) conn.close(); } catch (Exception ignore) {}
-        }
-        return resp;
     }
 
     /**
