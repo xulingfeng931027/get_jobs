@@ -40,6 +40,12 @@ interface UserPackageHistory {
 interface UserInfo {
   id: number;
   username: string;
+  packageType?: number;
+  packageStatus?: number;
+  totalCount?: number;
+  usedCount?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 const STATUS_MAP: Record<number, { label: string; class: string; icon: any }> = {
@@ -299,11 +305,17 @@ export default function PackagePage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {userPackage && user.id === activateUserId && userPackage.hasActivePackage ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200">
-                          <CheckCircle className="w-3 h-3" />
-                          {userPackage.packageName || "套餐中"}
-                        </span>
+                      {user.packageStatus != null ? (
+                        (() => {
+                          const statusInfo = STATUS_MAP[user.packageStatus] || STATUS_MAP[0];
+                          const PackageIcon = statusInfo.icon;
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full ${statusInfo.class} border border-opacity-20`}>
+                              <PackageIcon className="w-3 h-3" />
+                              {statusInfo.label}
+                            </span>
+                          );
+                        })()
                       ) : (
                         <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-200">
                           <XCircle className="w-3 h-3" />
@@ -312,9 +324,9 @@ export default function PackagePage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {userPackage && user.id === activateUserId && userPackage.hasActivePackage ? (
+                      {user.packageStatus != null && user.packageStatus === 1 ? (
                         <span>
-                          {userPackage.usedCount || 0} / {userPackage.totalCount === -1 ? "∞" : userPackage.totalCount}
+                          {user.usedCount || 0} / {user.totalCount === -1 ? "∞" : user.totalCount}
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -323,8 +335,8 @@ export default function PackagePage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        {userPackage && user.id === activateUserId && userPackage.endDate
-                          ? formatDate(userPackage.endDate)
+                        {user.packageStatus != null && user.packageStatus === 1 && user.endDate
+                          ? formatDate(user.endDate)
                           : "-"}
                       </div>
                     </td>
