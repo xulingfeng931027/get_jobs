@@ -76,9 +76,6 @@ public class PlaywrightBrowserInstaller implements ApplicationRunner {
      */
     private boolean isBrowserInstalled() {
         Path browserPath = getBrowserPath();
-        if (browserPath == null) {
-            return false;
-        }
 
         Path executable = browserPath.resolve(getExecutableName());
         boolean exists = Files.exists(executable);
@@ -113,11 +110,20 @@ public class PlaywrightBrowserInstaller implements ApplicationRunner {
 
         // 根据浏览器类型和版本确定路径
         String browserPath;
+        String osName = System.getProperty("os.name").toLowerCase();
         switch (browserChannel.toLowerCase()) {
-            case "chromium" -> browserPath = basePath + "/chromium-1161/chrome-win";
+            case "chromium" -> {
+                String platformDir = osName.contains("windows") ? "chrome-win" :
+                        osName.contains("mac") ? "chrome-mac" : "chrome-linux";
+                browserPath = basePath + "/chromium-1161/" + platformDir;
+            }
             case "firefox" -> browserPath = basePath + "/firefox-1522";
             case "webkit" -> browserPath = basePath + "/webkit-2032";
-            default -> browserPath = basePath + "/chromium-1161/chrome-win";
+            default -> {
+                String platformDir = osName.contains("windows") ? "chrome-win" :
+                        osName.contains("mac") ? "chrome-mac" : "chrome-linux";
+                browserPath = basePath + "/chromium-1161/" + platformDir;
+            }
         }
 
         return Paths.get(browserPath);
@@ -130,7 +136,13 @@ public class PlaywrightBrowserInstaller implements ApplicationRunner {
         String os = System.getProperty("os.name").toLowerCase();
         switch (browserChannel.toLowerCase()) {
             case "chromium" -> {
-                return os.contains("windows") ? "chrome.exe" : "chrome";
+                if (os.contains("windows")) {
+                    return "chrome.exe";
+                } else if (os.contains("mac")) {
+                    return "Chromium";
+                } else {
+                    return "chrome";
+                }
             }
             case "firefox" -> {
                 return os.contains("windows") ? "firefox.exe" : "firefox";

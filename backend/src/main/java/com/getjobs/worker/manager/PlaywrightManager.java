@@ -129,8 +129,17 @@ public class PlaywrightManager {
             log.info("✓ Playwright引擎已启动");
 
             // 创建浏览器实例,使用固定CDP端口7866,最大化启动
-            // 诊断信息：检查 Chromium 路径
-            String chromiumPath = System.getProperty("user.home") + "\\AppData\\Local\\ms-playwright\\chromium-1161\\chrome-win\\chrome.exe";
+            // 诊断信息：检查 Chromium 路径（根据操作系统确定路径）
+            String os = System.getProperty("os.name").toLowerCase();
+            String userHome = System.getProperty("user.home");
+            String chromiumPath;
+            if (os.contains("windows")) {
+                chromiumPath = userHome + "\\AppData\\Local\\ms-playwright\\chromium-1161\\chrome-win\\chrome.exe";
+            } else if (os.contains("mac")) {
+                chromiumPath = userHome + "/Library/Caches/ms-playwright/chromium-1161/chrome-mac/Chromium.app/Contents/MacOS/Chromium";
+            } else {
+                chromiumPath = userHome + "/.cache/ms-playwright/chromium-1161/chrome-linux/chrome";
+            }
             java.io.File chromiumFile = new java.io.File(chromiumPath);
             if (!chromiumFile.exists()) {
                 log.error("✗ Chromium 可执行文件不存在: {}", chromiumPath);
