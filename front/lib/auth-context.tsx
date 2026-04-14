@@ -14,6 +14,10 @@ interface BillingInfo {
   applicationCount: number
   hasSubscription: boolean
   subscriptionEndDate?: string
+  hasPackage: boolean
+  packageType?: number
+  packageRemainingCount?: number
+  packageEndDate?: string
   aiMatchCount: number
   aiGreetCount: number
   reportCount: number

@@ -1,5 +1,6 @@
 package com.getjobs.application.controller;
 
+
 import com.getjobs.application.service.SubscriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

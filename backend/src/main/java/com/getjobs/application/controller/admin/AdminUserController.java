@@ -1,8 +1,9 @@
-package com.getjobs.application.controller;
+package com.getjobs.application.controller.admin;
 
 import com.getjobs.application.entity.ConsumptionLogEntity;
 import com.getjobs.application.entity.RechargeLogEntity;
 import com.getjobs.application.service.AdminUserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.Map;
 /**
  * 后台用户管理控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
@@ -49,6 +51,7 @@ public class AdminUserController {
             result.put("data", adminUserService.getUserDetail(id));
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("查询用户详情失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.status(404).body(result);
@@ -68,6 +71,7 @@ public class AdminUserController {
             result.put("message", success ? "已禁用" : "操作失败");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("禁用用户失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -87,6 +91,7 @@ public class AdminUserController {
             result.put("message", success ? "已启用" : "操作失败");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("启用用户失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -142,6 +147,7 @@ public class AdminUserController {
             result = adminUserService.updateUserBalance(id, applicationCount, aiMatchCount, aiGreetCount, reportCount, reason);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("修改用户余额失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -179,9 +185,10 @@ public class AdminUserController {
             result.put("userId", userId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("创建用户失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(result);
+            return ResponseEntity.internalServerError().body(result);
         }
     }
 
@@ -202,6 +209,7 @@ public class AdminUserController {
             result.put("message", "用户更新成功");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("更新用户信息失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -221,6 +229,7 @@ public class AdminUserController {
             result.put("message", "用户删除成功");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("删除用户失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);

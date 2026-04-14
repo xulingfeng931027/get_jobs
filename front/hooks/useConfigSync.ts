@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { isElectron, getElectronAPI } from '@/lib/electron'
+import { authFetch } from '@/lib/auth-fetch'
 import { API_PATHS } from '@/lib/api-config'
 
 export interface CloudConfig {
@@ -42,7 +43,7 @@ export function useConfigSync() {
         }
       } else {
         // 后端 API 模式
-        const response = await fetch(API_PATHS.config)
+        const response = await authFetch(API_PATHS.config)
         const data = await response.json()
 
         if (data.success) {

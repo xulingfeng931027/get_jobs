@@ -8,7 +8,9 @@ import {Label} from "@/components/ui/label"
 import PageHeader from "@/app/components/PageHeader"
 import {BiBarChart, BiBriefcase, BiDownload, BiLineChart, BiRefresh} from "react-icons/bi"
 import {parseSalary} from "@/lib/salary"
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from "@/lib/api-config"
+import {useToast} from "@/components/Toast"
 
 type NameValue = { name: string; value: number }
 type BucketValue = { bucket: string; value: number }
@@ -222,6 +224,7 @@ function badgeClass(type: "status" | "delivery", text?: string) {
 }
 
 export default function AnalysisContent({ showHeader = false }: { showHeader?: boolean }) {
+  const { showToast } = useToast();
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
 
@@ -258,7 +261,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       if (keyword) params.set("keyword", keyword)
       params.set("page", String(toPage))
       params.set("size", String(toSize))
-      const res = await fetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
       const data: PagedResult = await res.json()
       setItems(data.items || [])
       setTotal(data.total || 0)
@@ -266,6 +269,16 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       setSize(data.size || toSize)
     } catch (e) {
       console.error("fetch zhilian list failed", e)
+      let msg = '加载失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     }
   }
 
@@ -280,11 +293,21 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       if (minK) params.set("minK", String(Number(minK)))
       if (maxK) params.set("maxK", String(Number(maxK)))
       if (keyword) params.set("keyword", keyword)
-      const res = await fetch(`${API_PATHS.zhilian.stats}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.zhilian.stats}?${params.toString()}`)
       const data: StatsResponse = await res.json()
       setStats(data)
     } catch (e) {
       console.error("fetch zhilian stats failed", e)
+      let msg = '加载失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoadingStats(false)
     }
@@ -321,7 +344,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await fetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
+        const res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length
@@ -365,6 +388,16 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error("export csv failed", e)
+      let msg = '导出失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setExporting(false)
     }
@@ -390,7 +423,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await fetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
+        const res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length
@@ -415,6 +448,11 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       setComputedSalaryBuckets(buckets.map((b, i) => ({ bucket: b.key, value: counts[i] })))
     } catch (e) {
       console.error("compute salary buckets failed", e)
+      let msg = '计算薪资分布失败'
+      if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
       setComputedSalaryBuckets([])
     }
   }

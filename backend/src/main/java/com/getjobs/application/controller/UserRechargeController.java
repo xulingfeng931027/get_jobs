@@ -1,7 +1,9 @@
 package com.getjobs.application.controller;
 
+
 import com.getjobs.application.service.BillingService;
 import com.getjobs.application.service.RechargeCodeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +14,7 @@ import java.util.Map;
 /**
  * 用户充值控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/billing")
 public class UserRechargeController {
@@ -47,6 +50,7 @@ public class UserRechargeController {
             result = rechargeCodeService.activateCode(userId, code);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("激活充值码失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);

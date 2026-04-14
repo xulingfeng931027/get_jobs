@@ -2,6 +2,7 @@ package com.getjobs.application.controller;
 
 import com.getjobs.application.entity.RechargeCodeEntity;
 import com.getjobs.application.service.RechargeCodeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import java.util.Map;
 /**
  * 充值码管理控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/recharge-codes")
 public class RechargeCodeController {
@@ -59,6 +61,7 @@ public class RechargeCodeController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("生成充值码失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.status(500).body(result);
@@ -113,6 +116,7 @@ public class RechargeCodeController {
             result.put("message", success ? "已冻结" : "操作失败");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("冻结充值码失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -132,6 +136,7 @@ public class RechargeCodeController {
             result.put("message", success ? "已作废" : "操作失败");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("作废充值码失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);

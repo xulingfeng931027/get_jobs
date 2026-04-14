@@ -6,9 +6,11 @@ import com.getjobs.application.entity.ConsumptionLogEntity;
 import com.getjobs.application.entity.RechargeLogEntity;
 import com.getjobs.application.entity.UserBalanceEntity;
 import com.getjobs.application.entity.UserEntity;
+import com.getjobs.application.entity.UserPackageEntity;
 import com.getjobs.application.mapper.ConsumptionLogMapper;
 import com.getjobs.application.mapper.RechargeLogMapper;
 import com.getjobs.application.mapper.UserBalanceMapper;
+import com.getjobs.application.mapper.UserPackageMapper;
 import com.getjobs.application.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -31,6 +33,9 @@ public class AdminUserService {
 
     @Autowired
     private UserBalanceMapper userBalanceMapper;
+
+    @Autowired
+    private UserPackageMapper userPackageMapper;
 
     @Autowired
     private RechargeLogMapper rechargeLogMapper;
@@ -62,7 +67,7 @@ public class AdminUserService {
         Page<UserEntity> pageRequest = new Page<>(page, size);
         Page<UserEntity> pageResult = userMapper.selectPage(pageRequest, queryWrapper);
 
-        // 为每个用户附加余额信息
+        // 为每个用户附加余额信息和套餐信息
         List<Map<String, Object>> userList = pageResult.getRecords().stream().map(user -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", user.getId());
@@ -76,6 +81,24 @@ public class AdminUserService {
             map.put("balance", balance != null ? balance.getApplicationCount() : 0);
             map.put("totalRecharge", balance != null ? balance.getTotalRecharge() : 0);
             map.put("totalConsumption", balance != null ? balance.getTotalConsumption() : 0);
+
+            // 查询当前有效套餐
+            UserPackageEntity activePackage = userPackageMapper.selectActivePackage(user.getId(), LocalDateTime.now());
+            if (activePackage != null) {
+                map.put("packageType", activePackage.getPackageType());
+                map.put("packageStatus", activePackage.getStatus());
+                map.put("totalCount", activePackage.getTotalCount());
+                map.put("usedCount", activePackage.getUsedCount());
+                map.put("startDate", activePackage.getStartDate());
+                map.put("endDate", activePackage.getEndDate());
+            } else {
+                map.put("packageType", null);
+                map.put("packageStatus", null);
+                map.put("totalCount", null);
+                map.put("usedCount", null);
+                map.put("startDate", null);
+                map.put("endDate", null);
+            }
 
             return map;
         }).toList();
@@ -117,6 +140,24 @@ public class AdminUserService {
             result.put("balance", 0);
             result.put("totalRecharge", 0);
             result.put("totalConsumption", 0);
+        }
+
+        // 查询当前有效套餐
+        UserPackageEntity activePackage = userPackageMapper.selectActivePackage(userId, LocalDateTime.now());
+        if (activePackage != null) {
+            result.put("packageType", activePackage.getPackageType());
+            result.put("packageStatus", activePackage.getStatus());
+            result.put("totalCount", activePackage.getTotalCount());
+            result.put("usedCount", activePackage.getUsedCount());
+            result.put("startDate", activePackage.getStartDate());
+            result.put("endDate", activePackage.getEndDate());
+        } else {
+            result.put("packageType", null);
+            result.put("packageStatus", null);
+            result.put("totalCount", null);
+            result.put("usedCount", null);
+            result.put("startDate", null);
+            result.put("endDate", null);
         }
 
         return result;
@@ -210,6 +251,7 @@ public class AdminUserService {
     /**
      * 创建C端用户
      */
+    @Transactional
     public Long createUser(String username, String email, String phone, String password) {
         // 检查用户名是否已存在
         QueryWrapper<UserEntity> queryWrapper = new QueryWrapper<>();

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { isElectron, getElectronAPI } from '@/lib/electron'
+import { authFetch } from '@/lib/auth-fetch'
 import { API_PATHS } from '@/lib/api-config'
+import { useToast } from "@/components/Toast"
 
 export interface ProgressMessage {
   platform: string
@@ -25,6 +27,7 @@ export interface UseDeliveryOptions {
 
 export function useDelivery(options: UseDeliveryOptions) {
   const { platform } = options
+  const { showToast } = useToast();
   const [isDelivering, setIsDelivering] = useState(false)
   const [progress, setProgress] = useState<ProgressMessage[]>([])
   const [lastMessage, setLastMessage] = useState<ProgressMessage | null>(null)
@@ -62,7 +65,7 @@ export function useDelivery(options: UseDeliveryOptions) {
     } else {
       // 后端 API 模式（兼容当前架构）
       try {
-        const response = await fetch(API_PATHS[platform].start, {
+        const response = await authFetch(API_PATHS[platform].start, {
           method: 'POST',
         })
         const data = await response.json()
@@ -76,7 +79,15 @@ export function useDelivery(options: UseDeliveryOptions) {
           return false
         }
       } catch (error: any) {
-        addProgress({ platform, type: 'error', message: error.message })
+        let msg = error.message || '启动失败'
+        if (response && !response.ok) {
+          try {
+            const errData = await response.clone().json()
+            msg = errData.message || msg
+          } catch {}
+        }
+        addProgress({ platform, type: 'error', message: msg })
+        showToast(msg, 'error')
         return false
       }
     }
@@ -109,7 +120,7 @@ export function useDelivery(options: UseDeliveryOptions) {
     } else {
       // 后端 API 模式（兼容当前架构）
       try {
-        const response = await fetch(API_PATHS[platform].stop, {
+        const response = await authFetch(API_PATHS[platform].stop, {
           method: 'POST',
         })
         const data = await response.json()
@@ -123,7 +134,15 @@ export function useDelivery(options: UseDeliveryOptions) {
           return false
         }
       } catch (error: any) {
-        addProgress({ platform, type: 'error', message: error.message })
+        let msg = error.message || '停止失败'
+        if (response && !response.ok) {
+          try {
+            const errData = await response.clone().json()
+            msg = errData.message || msg
+          } catch {}
+        }
+        addProgress({ platform, type: 'error', message: msg })
+        showToast(msg, 'error')
         return false
       }
     }

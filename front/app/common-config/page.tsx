@@ -6,6 +6,7 @@ import {Button} from '@/components/ui/button'
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
 import {Input} from '@/components/ui/input'
 import PageHeader from '@/app/components/PageHeader'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
 import {useToast} from '@/components/Toast'
 
@@ -44,7 +45,7 @@ export default function CommonConfigPage() {
   const fetchOptions = async () => {
     try {
       setLoading(true)
-      const response = await fetch(API_PATHS.commonOption)
+      const response = await authFetch(API_PATHS.commonOption)
       if (response.ok) {
         const result = await response.json()
         // 兼容不同的 API 响应格式
@@ -55,6 +56,16 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('获取选项失败:', error)
+      let msg = '获取选项失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoading(false)
     }
@@ -88,7 +99,7 @@ export default function CommonConfigPage() {
     }
 
     try {
-      const response = await fetch(API_PATHS.commonOption, {
+      const response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,7 +121,16 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('添加关键词失败:', error)
-      setKeywordError('网络错误，请检查后端服务')
+      let msg = '网络错误，请检查后端服务'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setKeywordError(msg)
     }
   }
 
@@ -143,7 +163,7 @@ export default function CommonConfigPage() {
     }
 
     try {
-      const response = await fetch(API_PATHS.commonOption, {
+      const response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,14 +186,23 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('添加薪资范围失败:', error)
-      setSalaryError('网络错误，请检查后端服务')
+      let msg = '网络错误，请检查后端服务'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSalaryError(msg)
     }
   }
 
   // 删除选项
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(API_PATHS.commonOptionById(id), {
+      const response = await authFetch(API_PATHS.commonOptionById(id), {
         method: 'DELETE',
       })
 
@@ -186,7 +215,16 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('删除选项失败:', error)
-      showToast('删除失败: 网络错误', 'error')
+      let msg = '删除失败: 网络错误'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 
@@ -224,7 +262,7 @@ export default function CommonConfigPage() {
     }
 
     try {
-      const response = await fetch(API_PATHS.commonOptionById(option.id), {
+      const response = await authFetch(API_PATHS.commonOptionById(option.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -246,7 +284,16 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('更新失败:', error)
-      setEditError('网络错误，请检查后端服务')
+      let msg = '网络错误，请检查后端服务'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setEditError(msg)
     }
   }
 
@@ -289,7 +336,7 @@ export default function CommonConfigPage() {
     }
 
     try {
-      const response = await fetch(API_PATHS.commonOption, {
+      const response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -311,7 +358,16 @@ export default function CommonConfigPage() {
       }
     } catch (error) {
       console.error('添加黑名单关键词失败:', error)
-      setBlacklistError('网络错误，请检查后端服务')
+      let msg = '网络错误，请检查后端服务'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setBlacklistError(msg)
     }
   }
 

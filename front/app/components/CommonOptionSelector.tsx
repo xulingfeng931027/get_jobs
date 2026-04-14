@@ -5,7 +5,9 @@ import {createPortal} from 'react-dom'
 import {BiCheck, BiCollection} from 'react-icons/bi'
 import {Button} from '@/components/ui/button'
 import {cn} from '@/lib/utils'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from "@/components/Toast"
 
 interface CommonOption {
   id: number
@@ -31,6 +33,7 @@ export default function CommonOptionSelector({
   currentValues = [],
   buttonText,
 }: CommonOptionSelectorProps) {
+  const { showToast } = useToast();
   const [options, setOptions] = useState<CommonOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -51,7 +54,7 @@ export default function CommonOptionSelector({
   const fetchOptions = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_PATHS.commonOption}?type=${type}`)
+      const response = await authFetch(`${API_PATHS.commonOption}?type=${type}`)
       if (response.ok) {
         const data = await response.json()
         // 按 sortOrder 排序
@@ -65,6 +68,16 @@ export default function CommonOptionSelector({
       }
     } catch (error) {
       console.error('获取公共选项失败:', error)
+      let msg = '获取公共选项失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setOptions([])
     } finally {
       setLoading(false)

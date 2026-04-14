@@ -7,6 +7,7 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import PageHeader from '@/app/components/PageHeader'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
 import {useToast} from '@/components/Toast'
 
@@ -28,7 +29,7 @@ export default function EnvConfig() {
   const fetchConfig = async () => {
     try {
       setLoading(true)
-      const response = await fetch(API_PATHS.config, {
+      const response = await authFetch(API_PATHS.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +60,16 @@ export default function EnvConfig() {
       }
     } catch (error) {
       console.error('获取配置失败:', error)
-      showToast('获取配置失败，请检查后端服务是否正常运行', 'error')
+      let msg = '获取配置失败，请检查后端服务是否正常运行'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoading(false)
     }
@@ -80,7 +90,7 @@ export default function EnvConfig() {
         DINGTALK_IS_SEND: String(envConfig.dingtalkIsSend ?? 0),
       }
 
-      const response = await fetch(API_PATHS.config, {
+      const response = await authFetch(API_PATHS.config, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,8 +114,17 @@ export default function EnvConfig() {
       }
     } catch (error) {
       console.error('保存配置失败:', error)
+      let msg = '保存配置失败：网络或服务异常'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
       if (!silent) {
-        setSaveResult({ success: false, message: '保存配置失败：网络或服务异常。' })
+        setSaveResult({ success: false, message: msg })
         setShowSaveDialog(true)
       }
     } finally {

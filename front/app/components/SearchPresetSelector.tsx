@@ -6,7 +6,9 @@ import {BiBookmark, BiPlus, BiX} from 'react-icons/bi'
 import {Button} from '@/components/ui/button'
 import {Input} from '@/components/ui/input'
 import {cn} from '@/lib/utils'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from "@/components/Toast"
 
 interface SearchPreset {
   id: number
@@ -29,6 +31,7 @@ export default function SearchPresetSelector({
   currentCity,
   onSelect,
 }: SearchPresetSelectorProps) {
+  const { showToast } = useToast();
   const [presets, setPresets] = useState<SearchPreset[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -64,7 +67,7 @@ export default function SearchPresetSelector({
   const fetchPresets = async () => {
     try {
       setLoading(true)
-      const response = await fetch(API_PATHS.searchPreset)
+      const response = await authFetch(API_PATHS.searchPreset)
       if (response.ok) {
         const data = await response.json()
         setPresets(data || [])
@@ -73,6 +76,16 @@ export default function SearchPresetSelector({
       }
     } catch (error) {
       console.error('获取搜索预设失败:', error)
+      let msg = '获取搜索预设失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoading(false)
     }
@@ -82,7 +95,7 @@ export default function SearchPresetSelector({
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation() // 阻止事件冒泡，避免触发选择
     try {
-      const response = await fetch(API_PATHS.searchPresetById(id), {
+      const response = await authFetch(API_PATHS.searchPresetById(id), {
         method: 'DELETE',
       })
       if (response.ok) {
@@ -96,6 +109,16 @@ export default function SearchPresetSelector({
       }
     } catch (error) {
       console.error('删除预设失败:', error)
+      let msg = '删除预设失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 
@@ -104,7 +127,7 @@ export default function SearchPresetSelector({
     if (!saveName.trim()) return
 
     try {
-      const response = await fetch(API_PATHS.searchPreset, {
+      const response = await authFetch(API_PATHS.searchPreset, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,6 +148,16 @@ export default function SearchPresetSelector({
       }
     } catch (error) {
       console.error('保存预设失败:', error)
+      let msg = '保存预设失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 

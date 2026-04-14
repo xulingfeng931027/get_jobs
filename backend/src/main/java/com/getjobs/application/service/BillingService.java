@@ -43,7 +43,7 @@ public class BillingService {
         UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
         if (balance == null) {
             result.put("allowed", false);
-            result.put("reason", "用户账户不存在，请先注册");
+            result.put("reason", "用户余额不存在或不足，请先联系管理员充值!");
             result.put("applicationCount", 0);
             result.put("hasSubscription", false);
             result.put("hasPackage", false);
@@ -182,7 +182,7 @@ public class BillingService {
      * 获取用户计费信息
      *
      * @param userId 用户ID
-     * @return 计费信息 {applicationCount, hasSubscription, subscriptionEndDate, totalRecharge, totalConsumption}
+     * @return 计费信息 {applicationCount, hasSubscription, subscriptionEndDate, totalRecharge, totalConsumption, hasPackage, packageType, packageRemainingCount, packageEndDate}
      */
     public Map<String, Object> getUserBillingInfo(Long userId) {
         UserBalanceEntity balance = userBalanceMapper.selectByUserId(userId);
@@ -199,6 +199,19 @@ public class BillingService {
         result.put("reportCount", balance.getReportCount() != null ? balance.getReportCount() : 0);
         result.put("totalRecharge", balance.getTotalRecharge() != null ? balance.getTotalRecharge() : 0);
         result.put("totalConsumption", balance.getTotalConsumption() != null ? balance.getTotalConsumption() : 0);
+
+        // 补充套餐信息
+        boolean hasPackage = packageService.hasActivePackage(userId);
+        result.put("hasPackage", hasPackage);
+        if (hasPackage) {
+            var pkg = packageService.getCurrentPackage(userId);
+            if (pkg != null) {
+                result.put("packageType", pkg.getPackageType());
+                int remaining = pkg.getTotalCount() == -1 ? -1 : pkg.getTotalCount() - pkg.getUsedCount();
+                result.put("packageRemainingCount", remaining);
+                result.put("packageEndDate", pkg.getEndDate());
+            }
+        }
 
         return result;
     }

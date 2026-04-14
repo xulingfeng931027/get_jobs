@@ -1,5 +1,6 @@
 package com.getjobs.application.controller;
 
+
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.entity.ZhilianConfigEntity;
 import com.getjobs.application.service.BillingService;
@@ -197,6 +198,7 @@ public class ZhilianController {
             response.put("data", data);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("读取智联招聘Cookie记录失败: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "读取Cookie记录失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
@@ -215,6 +217,7 @@ public class ZhilianController {
             response.put("message", "已主动保存智联招聘Cookie到数据库");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("保存智联招聘Cookie失败: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "保存智联招聘Cookie失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);

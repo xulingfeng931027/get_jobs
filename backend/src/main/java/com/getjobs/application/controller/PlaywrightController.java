@@ -1,6 +1,7 @@
 package com.getjobs.application.controller;
 
 import com.getjobs.worker.manager.PlaywrightManager;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +14,7 @@ import java.util.Map;
  * Playwright管理控制器
  * 用于测试和管理Playwright实例
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/playwright")
 public class PlaywrightController {
@@ -54,6 +56,7 @@ public class PlaywrightController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("测试Boss导航功能失败: {}", e.getMessage(), e);
             Map<String, String> error = new HashMap<>();
             error.put("success", "false");
             error.put("error", e.getMessage());

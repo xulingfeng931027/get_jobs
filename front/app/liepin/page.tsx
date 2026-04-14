@@ -12,8 +12,9 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import AnalysisContent from '@/app/liepin/analysis/AnalysisContent'
 import PageHeader from '@/app/components/PageHeader'
 import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
-import {getToken, request} from '@/lib/auth-api'
+import {useToast} from "@/components/Toast"
 
 interface LiepinConfig {
   id?: number
@@ -34,6 +35,7 @@ interface LiepinOptions {
 }
 
 export default function LiepinPage() {
+  const { showToast } = useToast();
   const [config, setConfig] = useState<LiepinConfig>({
     keywords: '',
     city: '',
@@ -137,7 +139,7 @@ export default function LiepinPage() {
 
   const fetchAllData = async () => {
     try {
-      const response = await fetch(API_PATHS.liepin.config)
+      const response = await authFetch(API_PATHS.liepin.config)
       const data = await response.json()
 
       console.log('Fetched liepin data:', data)
@@ -167,7 +169,7 @@ export default function LiepinPage() {
   const handleSave = async () => {
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await fetch(API_PATHS.liepin.config, {
+      const response = await authFetch(API_PATHS.liepin.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +180,7 @@ export default function LiepinPage() {
       if (response.ok) {
         // 统一保存 Cookie（Liepin）
         try {
-          await fetch(API_PATHS.cookieSave('liepin'), { method: 'POST' })
+          await authFetch(API_PATHS.cookieSave('liepin'), { method: 'POST' })
         } catch (e) {
           console.warn('保存 Cookie 失败（Liepin）:', e)
         }
@@ -193,7 +195,16 @@ export default function LiepinPage() {
       }
     } catch (error) {
       console.error('Failed to save config:', error)
-      setSaveResult({ success: false, message: '保存失败：网络或服务异常。' })
+      let msg = '保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSaveResult({ success: false, message: msg })
       setShowSaveDialog(true)
     }
   }
@@ -201,12 +212,8 @@ export default function LiepinPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const token = getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(API_PATHS.liepin.start, {
-        method: 'POST',
-        headers,
+      const response = await authFetch(API_PATHS.liepin.start, {
+        method: 'POST'
       })
       const data = await response.json()
 
@@ -219,19 +226,24 @@ export default function LiepinPage() {
       }
     } catch (error) {
       console.error('Failed to start delivery:', error)
-      // 启动失败：不弹框
+      let msg = '启动失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setIsDelivering(false)
     }
   }
 
   const handleStopDelivery = async () => {
     try {
-      const token = getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(API_PATHS.liepin.stop, {
-        method: 'POST',
-        headers,
+      const response = await authFetch(API_PATHS.liepin.stop, {
+        method: 'POST'
       })
       const data = await response.json()
 
@@ -244,16 +256,22 @@ export default function LiepinPage() {
       }
     } catch (error) {
       console.error('Failed to stop delivery:', error)
-      // 停止失败：不弹框
+      let msg = '停止失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 
   const triggerLogout = async () => {
     try {
-      const token = getToken()
-      const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const response = await fetch(API_PATHS.liepin.logout, { method: 'POST', headers })
+      const response = await authFetch(API_PATHS.liepin.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)
@@ -268,7 +286,16 @@ export default function LiepinPage() {
       }
     } catch (error) {
       console.error('Failed to logout:', error)
-      setLogoutResult({ success: false, message: '退出登录失败：网络或服务异常。' })
+      let msg = '退出登录失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setLogoutResult({ success: false, message: msg })
       setShowLogoutResultDialog(true)
     }
   }

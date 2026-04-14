@@ -9,6 +9,7 @@ import {Label} from "@/components/ui/label"
 import PageHeader from "@/app/components/PageHeader"
 import {BiBarChart, BiBriefcase, BiDownload, BiLineChart, BiPieChart, BiRefresh} from "react-icons/bi"
 import {parseSalary} from "@/lib/salary"
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from "@/lib/api-config"
 import {useToast} from "@/components/Toast"
 
@@ -265,7 +266,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
 
     try {
       setLoadingList(true)
-      const res = await fetch(`${API_PATHS.liepin.list}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
       const data: PagedResult = await res.json()
       setItems(data.items || [])
       setTotal(data.total || 0)
@@ -273,6 +274,16 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       setSize(data.size || toSize)
     } catch (e) {
       console.error("fetch liepin list failed", e)
+      let msg = '加载失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoadingList(false)
     }
@@ -290,11 +301,21 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
 
     try {
       setLoadingStats(true)
-      const res = await fetch(`${API_PATHS.liepin.stats}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.liepin.stats}?${params.toString()}`)
       const data: StatsResponse = await res.json()
       setStats(data)
     } catch (e) {
       console.error("fetch liepin stats failed", e)
+      let msg = '加载失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoadingStats(false)
     }
@@ -323,7 +344,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await fetch(`${API_PATHS.liepin.list}?${params.toString()}`)
+        const res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length
@@ -368,7 +389,16 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error("export CSV failed", e)
-      showToast("导出失败，请稍后重试", "error")
+      let msg = '导出失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setExporting(false)
     }
@@ -395,7 +425,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await fetch(`${API_PATHS.liepin.list}?${params.toString()}`)
+        const res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length
@@ -424,6 +454,11 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       setComputedSalaryBuckets(buckets.map((b) => ({ bucket: b.key, value: counts.get(b.key) || 0 })))
     } catch (e) {
       console.error("compute salary buckets failed", e)
+      let msg = '计算薪资分布失败'
+      if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
       setComputedSalaryBuckets([])
     }
   }

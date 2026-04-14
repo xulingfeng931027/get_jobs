@@ -8,6 +8,7 @@ import {Input} from '@/components/ui/input'
 import {Label} from '@/components/ui/label'
 import {Textarea} from '@/components/ui/textarea'
 import PageHeader from '@/app/components/PageHeader'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
 import {useToast} from '@/components/Toast'
 
@@ -42,7 +43,7 @@ export default function AiConfigPage() {
 
   const fetchAiConfig = async () => {
     try {
-      const response = await fetch(API_PATHS.aiConfig, {
+      const response = await authFetch(API_PATHS.aiConfig, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -62,6 +63,11 @@ export default function AiConfigPage() {
       }
     } catch (error) {
       console.error('加载AI配置失败:', error)
+      let msg = '加载AI配置失败'
+      if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       // 如果加载失败，使用默认值，不影响用户使用
       console.log('使用默认配置')
     }
@@ -70,7 +76,7 @@ export default function AiConfigPage() {
   // 加载 API 配置
   const fetchApiConfig = async () => {
     try {
-      const response = await fetch(API_PATHS.config, {
+      const response = await authFetch(API_PATHS.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -91,6 +97,16 @@ export default function AiConfigPage() {
       }
     } catch (error) {
       console.error('加载API配置失败:', error)
+      let msg = '加载API配置失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     } finally {
       setLoading(false)
     }
@@ -99,7 +115,7 @@ export default function AiConfigPage() {
   // 加载 boss_config 的 enable_ai 字段
   const fetchEnableAi = async () => {
     try {
-      const response = await fetch(API_PATHS.boss.config, {
+      const response = await authFetch(API_PATHS.boss.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -116,6 +132,16 @@ export default function AiConfigPage() {
       setEnableAi(val === '1' || val === 'true' || val === 'on' ? 1 : Number(raw) === 1 ? 1 : 0)
     } catch (e) {
       console.error('加载enable_ai失败:', e)
+      let msg = '加载enable_ai失败'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     }
   }
 
@@ -124,7 +150,7 @@ export default function AiConfigPage() {
     try {
       const next = enableAi ? 0 : 1
       setEnableAi(next)
-      const response = await fetch(API_PATHS.boss.config, {
+      const response = await authFetch(API_PATHS.boss.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +174,7 @@ export default function AiConfigPage() {
     setSaving(true)
     try {
       // 保存AI配置
-      const aiResponse = await fetch(API_PATHS.aiConfig, {
+      const aiResponse = await authFetch(API_PATHS.aiConfig, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +188,7 @@ export default function AiConfigPage() {
         API_KEY: apiConfig.apiKey,
         MODEL: apiConfig.model,
       }
-      const apiResponse = await fetch(API_PATHS.config, {
+      const apiResponse = await authFetch(API_PATHS.config, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +206,11 @@ export default function AiConfigPage() {
       }
     } catch (error) {
       console.error('保存配置失败:', error)
-      showToast('保存失败，请检查服务器连接！', 'error')
+      let msg = '保存失败，请检查服务器连接'
+      if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     } finally {
       setSaving(false)
     }

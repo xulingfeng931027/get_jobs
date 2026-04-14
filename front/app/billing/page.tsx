@@ -78,42 +78,63 @@ export default function BillingPage() {
         {/* 投递次数 */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">剩余投递次数</div>
-          <div className="text-3xl font-bold text-blue-600">{billing?.applicationCount ?? 0}</div>
-          {billing?.hasSubscription && (
+          <div className="text-3xl font-bold text-blue-600">
+            {billing?.hasPackage
+              ? (billing.packageRemainingCount === -1 ? '无限' : `${billing.packageRemainingCount} 次`)
+              : `${billing?.applicationCount ?? 0} 次`}
+          </div>
+          {billing?.hasPackage && billing.packageRemainingCount === -1 && (
+            <div className="text-xs text-green-600 mt-2">套餐内不限次数</div>
+          )}
+          {billing?.hasSubscription && !billing?.hasPackage && (
             <div className="text-xs text-green-600 mt-2">订阅有效期内不限次数</div>
           )}
         </div>
 
-        {/* 订阅状态 */}
+        {/* 套餐卡片 */}
+      {billing?.hasPackage ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">订阅状态</div>
-          {billing?.hasSubscription ? (
-            <>
-              <div className="text-3xl font-bold text-green-600">有效</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                {daysLeft !== null ? `剩余 ${daysLeft} 天` : '计算中...'}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-3xl font-bold text-gray-400">未订阅</div>
-              <div className="text-xs text-gray-500 mt-2">订阅后不限投递次数</div>
-            </>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">当前套餐</div>
+          <div className="text-3xl font-bold text-green-600">
+            {billing.packageType === 1 ? '周套餐' : billing.packageType === 2 ? '月套餐' : '套餐'}
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            剩余 {billing.packageRemainingCount === -1 ? '无限' : `${billing.packageRemainingCount} 次`}
+          </div>
+          {billing.packageEndDate && (
+            <div className="text-xs text-gray-500 mt-1">
+              到期：{new Date(billing.packageEndDate).toLocaleDateString()}
+            </div>
           )}
         </div>
-
-        {/* AI 匹配 */}
+      ) : billing?.hasSubscription ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">AI 匹配次数</div>
-          <div className="text-3xl font-bold text-purple-600">{billing?.aiMatchCount ?? 0}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">订阅状态</div>
+          <div className="text-3xl font-bold text-green-600">有效</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            {daysLeft !== null ? `剩余 ${daysLeft} 天` : '计算中...'}
+          </div>
         </div>
-
-        {/* AI 打招呼 */}
+      ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">AI 打招呼次数</div>
-          <div className="text-3xl font-bold text-indigo-600">{billing?.aiGreetCount ?? 0}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">套餐状态</div>
+          <div className="text-3xl font-bold text-gray-400">无套餐</div>
+          <div className="text-xs text-gray-500 mt-2">请购买套餐享受不限投递次数</div>
         </div>
+      )}
+
+      {/* AI 匹配 */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
+        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">AI 匹配次数</div>
+        <div className="text-3xl font-bold text-purple-600">{billing?.aiMatchCount ?? 0}</div>
       </div>
+
+      {/* AI 打招呼 */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
+        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">AI 打招呼次数</div>
+        <div className="text-3xl font-bold text-indigo-600">{billing?.aiGreetCount ?? 0}</div>
+      </div>
+    </div>
 
       {/* 统计信息 */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700 mb-8">

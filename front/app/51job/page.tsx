@@ -12,7 +12,9 @@ import PageHeader from '@/app/components/PageHeader'
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import AnalysisContent from '@/app/51job/analysis/AnalysisContent'
 import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from "@/components/Toast"
 
 interface Job51Config {
   id?: number
@@ -28,6 +30,7 @@ interface Job51Options { jobArea: Job51Option[]; salary: Job51Option[] }
 const MAX_SALARY_SELECTIONS = 5
 
 export default function Job51Page() {
+  const { showToast } = useToast();
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isDelivering, setIsDelivering] = useState(false)
@@ -81,7 +84,7 @@ export default function Job51Page() {
               const data = JSON.parse(event.data)
               setIsLoggedIn(data.job51LoggedIn || false)
               if (data.job51LoggedIn && !cookieSavedAfterLogin) {
-                fetch(API_PATHS.cookieSave('51job'), { method: 'POST' }).catch(() => {})
+                authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' }).catch(() => {})
                 setCookieSavedAfterLogin(true)
               }
               setCheckingLogin(false)
@@ -98,7 +101,7 @@ export default function Job51Page() {
               if (data.platform === '51job') {
                 setIsLoggedIn(data.isLoggedIn)
                 if (data.isLoggedIn && !cookieSavedAfterLogin) {
-                  fetch(API_PATHS.cookieSave('51job'), { method: 'POST' }).catch(() => {})
+                  authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' }).catch(() => {})
                   setCookieSavedAfterLogin(true)
                 }
                 setCheckingLogin(false)
@@ -207,7 +210,7 @@ export default function Job51Page() {
 
   const fetchAllData = async () => {
     try {
-      const res = await fetch(API_PATHS.job51.config)
+      const res = await authFetch(API_PATHS.job51.config)
       if (!res.ok) {
         console.warn(`[51job] 获取配置失败: ${res.status}`)
         setConfig({ keywords: '', jobArea: '', salary: '' })
@@ -258,7 +261,7 @@ export default function Job51Page() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(API_PATHS.job51.config, { method: 'GET' })
+        const res = await authFetch(API_PATHS.job51.config, { method: 'GET' })
         const ok = !!res && res.ok
         setBackendAvailable(ok)
         if (ok) {
@@ -276,7 +279,7 @@ export default function Job51Page() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch(API_PATHS.job51.start, { method: 'POST' })
+      const response = await authFetch(API_PATHS.job51.start, { method: 'POST' })
       const data = await response.json()
       if (!data.success) {
         console.warn('[51job] 启动失败：', data.message)
@@ -284,13 +287,23 @@ export default function Job51Page() {
       }
     } catch (error) {
       console.error('[51job] 启动投递失败：', error)
+      let msg = '启动失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setIsDelivering(false)
     }
   }
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch(API_PATHS.job51.stop, { method: 'POST' })
+      const response = await authFetch(API_PATHS.job51.stop, { method: 'POST' })
       if (!response.ok) {
         // 后端返回错误状态码，恢复按钮
         console.warn('[51job] 停止投递请求失败，状态码:', response.status)
@@ -313,31 +326,59 @@ export default function Job51Page() {
     } catch (error) {
       // 网络异常或后端未启动，恢复按钮状态
       console.error('[51job] 停止投递请求异常:', error)
+      let msg = '停止失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setIsDelivering(false)
     }
   }
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch(API_PATHS.job51.logout, { method: 'POST' })
+      const response = await authFetch(API_PATHS.job51.logout, { method: 'POST' })
       const data = await response.json()
       setIsLoggedIn(false)
       setLogoutResult({ success: data.success, message: data.success ? '已退出登录，Cookie已清空。' : data.message })
       setShowLogoutResultDialog(true)
     } catch (error) {
-      setLogoutResult({ success: false, message: '退出登录失败：网络或服务异常。' })
+      let msg = '退出登录失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setLogoutResult({ success: false, message: msg })
       setShowLogoutResultDialog(true)
     }
   }
 
   const handleSaveCookie = async () => {
     try {
-      const response = await fetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
+      const response = await authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
       const data = await response.json()
       setSaveResult({ success: data.success, message: data.success ? '配置保存成功。' : data.message })
       setShowSaveDialog(true)
     } catch (error) {
-      setSaveResult({ success: false, message: '配置保存失败：网络或服务异常。' })
+      let msg = '配置保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSaveResult({ success: false, message: msg })
       setShowSaveDialog(true)
     }
   }
@@ -372,7 +413,7 @@ export default function Job51Page() {
         jobArea: toBracketListString(config.jobArea, 'jobArea'),
         salary: toBracketListString(config.salary, 'salary'),
       }
-      const response = await fetch(API_PATHS.job51.config, {
+      const response = await authFetch(API_PATHS.job51.config, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -380,7 +421,7 @@ export default function Job51Page() {
       if (response.ok) {
         // 保存配置成功后，同步保存 Cookie（按你的要求加到保存按钮）
         try {
-          await fetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
+          await authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
         } catch (e) {
           console.warn('[51job] 保存 Cookie 失败:', e)
         }
@@ -392,7 +433,16 @@ export default function Job51Page() {
       setShowSaveDialog(true)
     } catch (error) {
       console.error('[51job] 保存配置失败:', error)
-      setSaveResult({ success: false, message: '保存失败：网络或服务异常。' })
+      let msg = '保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSaveResult({ success: false, message: msg })
       setShowSaveDialog(true)
     }
   }

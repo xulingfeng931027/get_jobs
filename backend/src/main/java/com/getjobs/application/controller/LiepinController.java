@@ -11,6 +11,7 @@ import com.getjobs.worker.service.LiepinJobService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,6 +47,7 @@ public class LiepinController {
 
     /**
      * 检查登录状态
+     *
      * @return 登录状态信息
      */
     @GetMapping("/login-status")
@@ -69,6 +71,7 @@ public class LiepinController {
 
     /**
      * 启动猎聘自动投递任务
+     *
      * @return 响应结果
      */
     @PostMapping("/start")
@@ -141,6 +144,7 @@ public class LiepinController {
 
     /**
      * 停止猎聘任务
+     *
      * @return 响应结果
      */
     @PostMapping("/stop")
@@ -172,6 +176,7 @@ public class LiepinController {
 
     /**
      * 获取当前运行状态
+     *
      * @return 当前状态信息
      */
     @GetMapping("/status")
@@ -196,6 +201,7 @@ public class LiepinController {
 
     /**
      * 健康检查接口
+     *
      * @return 服务状态
      */
     @GetMapping("/health")
@@ -211,7 +217,9 @@ public class LiepinController {
 
     // ==================== 配置管理（合并） ====================
 
-    /** 获取所有猎聘配置信息（包括选项） */
+    /**
+     * 获取所有猎聘配置信息（包括选项）
+     */
     @GetMapping("/config")
     public Map<String, Object> getAllLiepinConfig() {
         Map<String, Object> result = new HashMap<>();
@@ -224,7 +232,9 @@ public class LiepinController {
         return result;
     }
 
-    /** 更新猎聘配置 */
+    /**
+     * 更新猎聘配置
+     */
     @PutMapping("/config")
     public LiepinConfigEntity updateConfig(@RequestBody LiepinConfigEntity config) {
         if (config.getCity() != null && !config.getCity().isEmpty()) {
@@ -237,7 +247,9 @@ public class LiepinController {
         return liepinService.saveOrUpdateFirstSelective(config);
     }
 
-    /** 获取指定类型的选项列表 */
+    /**
+     * 获取指定类型的选项列表
+     */
     @GetMapping("/config/options/{type}")
     public java.util.List<LiepinOptionEntity> getOptionsByType(@PathVariable String type) {
         return liepinService.getOptionsByType(type);
@@ -245,7 +257,9 @@ public class LiepinController {
 
     // ==================== 投递分析（合并） ====================
 
-    /** 投递分析统计与图表 */
+    /**
+     * 投递分析统计与图表
+     */
     @GetMapping("/stats")
     public LiepinService.StatsResponse getStats(
             @RequestParam(value = "statuses", required = false) String statuses,
@@ -266,7 +280,9 @@ public class LiepinController {
         return liepinService.getLiepinStats(statusList, location, experience, degree, minK, maxK, keyword);
     }
 
-    /** 岗位列表（分页 + 筛选） */
+    /**
+     * 岗位列表（分页 + 筛选）
+     */
     @GetMapping("/list")
     public LiepinService.PagedResult list(
             @RequestParam(value = "statuses", required = false) String statuses,
@@ -315,6 +331,7 @@ public class LiepinController {
             response.put("data", data);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("读取猎聘Cookie记录失败: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "读取Cookie记录失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
@@ -366,6 +383,7 @@ public class LiepinController {
             response.put("message", "已主动保存猎聘Cookie到数据库");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("保存猎聘Cookie失败: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "保存猎聘Cookie失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);

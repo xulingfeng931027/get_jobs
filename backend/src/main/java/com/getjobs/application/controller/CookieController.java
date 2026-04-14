@@ -1,5 +1,6 @@
 package com.getjobs.application.controller;
 
+
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.service.CookieService;
 import com.getjobs.worker.manager.PlaywrightManager;

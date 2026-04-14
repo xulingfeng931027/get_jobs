@@ -24,7 +24,9 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import PageHeader from '@/app/components/PageHeader'
 import AnalysisContent from '@/app/boss/analysis/AnalysisContent'
 import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from "@/components/Toast"
 
 interface BossConfig {
   id?: number
@@ -74,6 +76,7 @@ interface BlacklistItem {
 }
 
 export default function BossPage() {
+  const { showToast } = useToast();
   const [config, setConfig] = useState<BossConfig>({
     keywords: '',
     cityCode: '',
@@ -174,7 +177,7 @@ export default function BossPage() {
 
   const fetchAllData = async () => {
     try {
-      const response = await fetch(API_PATHS.boss.config)
+      const response = await authFetch(API_PATHS.boss.config)
       const data = await response.json()
 
       console.log('Fetched data:', data)
@@ -395,7 +398,7 @@ export default function BossPage() {
         stage: toBracketList(selectedStage),
         salary: toBracketList(selectedSalary),
       }
-      const response = await fetch(API_PATHS.boss.config, {
+      const response = await authFetch(API_PATHS.boss.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -406,7 +409,7 @@ export default function BossPage() {
       if (response.ok) {
         // 统一保存 Cookie（Boss）
         try {
-          await fetch(API_PATHS.cookieSave('boss'), { method: 'POST' })
+          await authFetch(API_PATHS.cookieSave('boss'), { method: 'POST' })
         } catch (e) {
           console.warn('保存 Cookie 失败（Boss）:', e)
         }
@@ -426,9 +429,17 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to save config:', error)
-      // 保存失败：不弹框
+      let msg = '保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
       if (!silent) {
-        setSaveResult({ success: false, message: '保存失败：网络或服务异常。' })
+        setSaveResult({ success: false, message: msg })
         setShowSaveDialog(true)
       }
     }
@@ -441,7 +452,7 @@ export default function BossPage() {
     }
 
     try {
-      const response = await fetch(API_PATHS.boss.blacklist, {
+      const response = await authFetch(API_PATHS.boss.blacklist, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -461,13 +472,22 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to add blacklist:', error)
-      // 添加失败：不弹框
+      let msg = '添加失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 
   const handleDeleteBlacklist = async (id: number) => {
     try {
-      const response = await fetch(API_PATHS.boss.blacklistById(id), {
+      const response = await authFetch(API_PATHS.boss.blacklistById(id), {
         method: 'DELETE',
       })
 
@@ -479,14 +499,23 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to delete blacklist:', error)
-      // 删除失败：不弹框
+      let msg = '删除失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
     }
   }
 
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch(API_PATHS.boss.start, {
+      const response = await authFetch(API_PATHS.boss.start, {
         method: 'POST',
       })
       const data = await response.json()
@@ -500,14 +529,23 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to start delivery:', error)
-      // 启动失败：不弹框
+      let msg = '操作失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setIsDelivering(false)
     }
   }
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch(API_PATHS.boss.stop, {
+      const response = await authFetch(API_PATHS.boss.stop, {
         method: 'POST',
       })
       const data = await response.json()
@@ -522,14 +560,23 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to stop delivery:', error)
-      // 停止失败：也要将状态设置为未投递
+      let msg = '操作失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
       setIsDelivering(false)
     }
   }
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch(API_PATHS.boss.logout, { method: 'POST' })
+      const response = await authFetch(API_PATHS.boss.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)
@@ -544,7 +591,16 @@ export default function BossPage() {
       }
     } catch (error) {
       console.error('Failed to logout:', error)
-      setLogoutResult({ success: false, message: '退出登录失败：网络或服务异常。' })
+      let msg = '退出登录失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setLogoutResult({ success: false, message: msg })
       setShowLogoutResultDialog(true)
     }
   }

@@ -1,8 +1,9 @@
-package com.getjobs.application.controller;
+package com.getjobs.application.controller.admin;
 
 import com.getjobs.application.entity.PackageDefinitionEntity;
 import com.getjobs.application.entity.UserPackageEntity;
 import com.getjobs.application.service.PackageService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.Map;
 /**
  * 后台套餐管理控制器
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/package")
 public class AdminPackageController {
@@ -32,7 +34,7 @@ public class AdminPackageController {
             Long userId = Long.parseLong(request.get("userId").toString());
             Integer packageType = Integer.parseInt(request.get("packageType").toString());
 
-            if (userId == null || packageType == null) {
+            if (userId == null) {
                 result.put("success", false);
                 result.put("message", "参数错误");
                 return ResponseEntity.badRequest().body(result);
@@ -41,10 +43,12 @@ public class AdminPackageController {
             Map<String, Object> activateResult = packageService.activatePackage(userId, packageType);
             return ResponseEntity.ok(activateResult);
         } catch (NumberFormatException e) {
+            log.error("激活套餐参数格式错误: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", "参数格式错误");
             return ResponseEntity.badRequest().body(result);
         } catch (Exception e) {
+            log.error("激活套餐失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -67,6 +71,7 @@ public class AdminPackageController {
             result.put("message", success ? "套餐已取消" : "取消失败");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("取消套餐失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(result);
@@ -89,6 +94,7 @@ public class AdminPackageController {
             result.put("history", packages);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("查询用户套餐状态失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.status(500).body(result);
@@ -108,6 +114,7 @@ public class AdminPackageController {
             result.put("data", definitions);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("查询套餐定义失败: {}", e.getMessage(), e);
             result.put("success", false);
             result.put("message", e.getMessage());
             return ResponseEntity.status(500).body(result);

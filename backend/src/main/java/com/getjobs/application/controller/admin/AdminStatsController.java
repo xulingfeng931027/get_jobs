@@ -1,4 +1,4 @@
-package com.getjobs.application.controller;
+package com.getjobs.application.controller.admin;
 
 import com.getjobs.application.service.AdminStatsService;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -8,6 +8,7 @@ import {Select} from "@/components/ui/select"
 import {Label} from "@/components/ui/label"
 import PageHeader from "@/app/components/PageHeader"
 import {BiBarChart, BiBriefcase, BiDownload, BiLineChart, BiPieChart, BiRefresh} from "react-icons/bi"
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from "@/lib/api-config"
 import {useToast} from "@/components/Toast"
 
@@ -338,7 +339,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
 
     try {
       setLoadingList(true)
-      const res = await fetch(`${API_PATHS.boss.list}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.boss.list}?${params.toString()}`)
       const data: PagedResult = await res.json()
       // 前端兜底过滤猎头（避免后端未更新导致的显示异常）
       const filteredItems = (data.items || []).filter(it => {
@@ -371,7 +372,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
 
     try {
       setLoadingStats(true)
-      const res = await fetch(`${API_PATHS.boss.stats}?${params.toString()}`)
+      const res = await authFetch(`${API_PATHS.boss.stats}?${params.toString()}`)
       const data: StatsResponse = await res.json()
       setStats(data)
     } catch (e) {
@@ -389,7 +390,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   const onReload = async () => {
     try {
       setReloading(true)
-      const res = await fetch(`${API_PATHS.boss.reload}`)
+      const res = await authFetch(`${API_PATHS.boss.reload}`)
       const data = await res.json()
       console.log("reload", data)
       await loadList(1, size)
@@ -425,7 +426,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await fetch(`${API_PATHS.boss.list}?${params.toString()}`)
+        const res = await authFetch(`${API_PATHS.boss.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         let chunk = data.items || []
         // 导出也做兜底过滤，确保CSV不含猎头岗位
@@ -477,7 +478,16 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       URL.revokeObjectURL(url)
     } catch (e) {
       console.error("export CSV failed", e)
-      showToast("导出失败，请稍后重试", "error")
+      let msg = '导出失败，请稍后重试'
+      if (res && !res.ok) {
+        try {
+          const errData = await res.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (e instanceof Error) {
+        msg = e.message
+      }
+      showToast(msg, 'error')
     } finally {
       setExporting(false)
     }

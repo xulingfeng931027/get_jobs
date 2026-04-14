@@ -1,5 +1,6 @@
 package com.getjobs.application.controller;
 
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getjobs.application.entity.CookieEntity;
 import com.getjobs.application.entity.Job51ConfigEntity;

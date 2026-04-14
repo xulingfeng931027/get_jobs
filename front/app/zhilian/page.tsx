@@ -12,7 +12,9 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import AnalysisContent from '@/app/zhilian/analysis/AnalysisContent'
 import PageHeader from '@/app/components/PageHeader'
 import CommonOptionSelector from '@/app/components/CommonOptionSelector'
+import { authFetch } from '@/lib/auth-fetch'
 import {API_PATHS} from '@/lib/api-config'
+import {useToast} from "@/components/Toast"
 
 interface ZhilianConfig {
   id?: number
@@ -25,6 +27,7 @@ interface Option { name: string; code: string }
 interface ZhilianOptions { city: Option[] }
 
 export default function ZhilianPage() {
+  const { showToast } = useToast();
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isDelivering, setIsDelivering] = useState(false)
   const [checkingLogin, setCheckingLogin] = useState(true)
@@ -118,7 +121,7 @@ export default function ZhilianPage() {
 
   const fetchAllData = async () => {
     try {
-      const res = await fetch(API_PATHS.zhilian.config)
+      const res = await authFetch(API_PATHS.zhilian.config)
       const data = await res.json()
       if (data.config) {
         const normalized = { ...data.config }
@@ -139,7 +142,7 @@ export default function ZhilianPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(API_PATHS.zhilian.config, { method: 'GET' })
+        const res = await authFetch(API_PATHS.zhilian.config, { method: 'GET' })
         const ok = !!res && res.ok
         setBackendAvailable(ok)
         if (ok) {
@@ -158,43 +161,81 @@ export default function ZhilianPage() {
   const handleStartDelivery = async () => {
     try {
       setIsDelivering(true)
-      const response = await fetch(API_PATHS.zhilian.start, { method: 'POST' })
+      const response = await authFetch(API_PATHS.zhilian.start, { method: 'POST' })
       const data = await response.json()
       if (!data.success) setIsDelivering(false)
     } catch (error) {
+      let msg = '操作失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
       setIsDelivering(false)
     }
   }
 
   const handleStopDelivery = async () => {
     try {
-      const response = await fetch(API_PATHS.zhilian.stop, { method: 'POST' })
+      const response = await authFetch(API_PATHS.zhilian.stop, { method: 'POST' })
       const data = await response.json()
       if (data.success) setIsDelivering(false)
-    } catch (error) {}
+    } catch (error) {
+      let msg = '操作失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      showToast(msg, 'error')
+    }
   }
 
   const triggerLogout = async () => {
     try {
-      const response = await fetch(API_PATHS.zhilian.logout, { method: 'POST' })
+      const response = await authFetch(API_PATHS.zhilian.logout, { method: 'POST' })
       const data = await response.json()
       setIsLoggedIn(false)
       setLogoutResult({ success: data.success, message: data.success ? '已退出登录，Cookie已清空。' : data.message })
       setShowLogoutResultDialog(true)
     } catch (error) {
-      setLogoutResult({ success: false, message: '退出登录失败：网络或服务异常。' })
+      let msg = '退出登录失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setLogoutResult({ success: false, message: msg })
       setShowLogoutResultDialog(true)
     }
   }
 
   const handleSaveCookie = async () => {
     try {
-      const response = await fetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' })
+      const response = await authFetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' })
       const data = await response.json()
       setSaveResult({ success: data.success, message: data.success ? '配置保存成功。' : data.message })
       setShowSaveDialog(true)
     } catch (error) {
-      setSaveResult({ success: false, message: '配置保存失败：网络或服务异常。' })
+      let msg = '配置保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSaveResult({ success: false, message: msg })
       setShowSaveDialog(true)
     }
   }
@@ -202,13 +243,13 @@ export default function ZhilianPage() {
   const handleSaveConfig = async () => {
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await fetch(API_PATHS.zhilian.config, {
+      const response = await authFetch(API_PATHS.zhilian.config, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       if (response.ok) {
-        try { await fetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' }) } catch {}
+        try { await authFetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' }) } catch {}
         await fetchAllData()
         setSaveResult({ success: true, message: '保存成功，配置已更新。' })
       } else {
@@ -217,7 +258,16 @@ export default function ZhilianPage() {
       setShowSaveDialog(true)
     } catch (error) {
       console.error('[智联] 保存配置失败:', error)
-      setSaveResult({ success: false, message: '保存失败：网络或服务异常。' })
+      let msg = '保存失败，请稍后重试'
+      if (response && !response.ok) {
+        try {
+          const errData = await response.clone().json()
+          msg = errData.message || msg
+        } catch {}
+      } else if (error instanceof Error) {
+        msg = error.message
+      }
+      setSaveResult({ success: false, message: msg })
       setShowSaveDialog(true)
     }
   }
