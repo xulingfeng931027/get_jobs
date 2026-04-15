@@ -109,6 +109,10 @@ public class PlaywrightManager {
     // ========== 新增：工具类注入 ==========
     @Autowired(required = false)
     private com.getjobs.worker.utils.CookieManager cookieManager;
+    /**
+     * -- GETTER --
+     *  获取当前用户ID
+     */
     // 当前用户ID（每个Java进程对应一个用户）
     private Long currentUserId;
 
@@ -1607,64 +1611,13 @@ public class PlaywrightManager {
 
     /**
      * 设置当前用户ID（每个Java进程对应一个用户）
-     * 设置后会重新加载该用户的Cookie
+     * 注意：仅记录 userId，不重新加载 Cookie，避免清空浏览器中用户已登录的状态
      * @param userId 用户ID
      */
     public void setCurrentUserId(Long userId) {
         if (this.currentUserId == null || !this.currentUserId.equals(userId)) {
             log.info("切换用户: {} -> {}", this.currentUserId, userId);
             this.currentUserId = userId;
-            // 切换用户后重新加载Cookie
-            reloadCookiesForCurrentUser();
-        }
-    }
-
-    /**
-     * 获取当前用户ID
-     */
-    public Long getCurrentUserId() {
-        return currentUserId;
-    }
-
-    /**
-     * 重新加载当前用户的Cookie到浏览器上下文
-     */
-    private void reloadCookiesForCurrentUser() {
-        if (context == null) {
-            log.warn("BrowserContext未初始化，无法加载Cookie");
-            return;
-        }
-        try {
-            // 清空现有Cookie
-            context.clearCookies();
-            log.info("已清空浏览器Cookie，准备加载用户: {} 的Cookie", currentUserId);
-
-            // 加载各平台Cookie
-            loadCookiesForUser(currentUserId, "liepin", LIEPIN_DOMAIN, liepinPage);
-            loadCookiesForUser(currentUserId, "51job", JOB51_DOMAIN, job51Page);
-            loadCookiesForUser(currentUserId, "zhilian", ZHILIAN_DOMAIN, zhilianPage);
-            // boss暂不支持
-        } catch (Exception e) {
-            log.error("重新加载用户Cookie失败: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 加载指定用户的Cookie到浏览器上下文
-     */
-    private void loadCookiesForUser(Long userId, String platform, String domain, Page page) {
-        try {
-            CookieEntity cookieEntity = cookieService.getCookieByPlatformAndUserId(platform, userId);
-            if (cookieEntity != null && cookieEntity.getCookieValue() != null && !cookieEntity.getCookieValue().isBlank()) {
-                String cookieStr = cookieEntity.getCookieValue();
-                List<Cookie> cookies = filterCookiesByDomain(parseCookiesFromString(cookieStr), domain);
-                if (!cookies.isEmpty()) {
-                    context.addCookies(cookies);
-                    log.info("已加载用户{}的{} Cookie，共{}条", userId, platform, cookies.size());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("加载用户{}的{} Cookie失败: {}", userId, platform, e.getMessage());
         }
     }
 

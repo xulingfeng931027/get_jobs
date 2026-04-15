@@ -27,9 +27,10 @@ export default function EnvConfig() {
 
   // 从数据库加载配置
   const fetchConfig = async () => {
+    let response: Response | undefined
     try {
       setLoading(true)
-      const response = await authFetch(API_PATHS.config, {
+      response = await authFetch(API_PATHS.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -80,6 +81,7 @@ export default function EnvConfig() {
   }, [])
 
   const handleSave = async (silent: boolean = false) => {
+    let response: Response | undefined
     try {
       setSaving(true)
 
@@ -90,7 +92,7 @@ export default function EnvConfig() {
         DINGTALK_IS_SEND: String(envConfig.dingtalkIsSend ?? 0),
       }
 
-      const response = await authFetch(API_PATHS.config, {
+      response = await authFetch(API_PATHS.config, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

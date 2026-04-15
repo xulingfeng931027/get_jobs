@@ -383,6 +383,7 @@ export default function BossPage() {
   }
 
   const handleSave = async (silent: boolean = false, overrides?: Partial<BossConfig>) => {
+    let response: Response | undefined
     try {
       // 组装要保存的负载：多选使用括号列表
       const payload: BossConfig = {
@@ -398,7 +399,7 @@ export default function BossPage() {
         stage: toBracketList(selectedStage),
         salary: toBracketList(selectedSalary),
       }
-      const response = await authFetch(API_PATHS.boss.config, {
+      response = await authFetch(API_PATHS.boss.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -451,8 +452,9 @@ export default function BossPage() {
       return
     }
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.boss.blacklist, {
+      response = await authFetch(API_PATHS.boss.blacklist, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -486,8 +488,9 @@ export default function BossPage() {
   }
 
   const handleDeleteBlacklist = async (id: number) => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.boss.blacklistById(id), {
+      response = await authFetch(API_PATHS.boss.blacklistById(id), {
         method: 'DELETE',
       })
 
@@ -513,9 +516,10 @@ export default function BossPage() {
   }
 
   const handleStartDelivery = async () => {
+    let response: Response | undefined
     try {
       setIsDelivering(true)
-      const response = await authFetch(API_PATHS.boss.start, {
+      response = await authFetch(API_PATHS.boss.start, {
         method: 'POST',
       })
       const data = await response.json()
@@ -544,8 +548,9 @@ export default function BossPage() {
   }
 
   const handleStopDelivery = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.boss.stop, {
+      response = await authFetch(API_PATHS.boss.stop, {
         method: 'POST',
       })
       const data = await response.json()
@@ -575,8 +580,9 @@ export default function BossPage() {
   }
 
   const triggerLogout = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.boss.logout, { method: 'POST' })
+      response = await authFetch(API_PATHS.boss.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)

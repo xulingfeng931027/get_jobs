@@ -14,11 +14,11 @@
     </parent>
 
     <!-- ===== 项目坐标 ===== -->
-    <groupId>com.getjobs</groupId>
-    <artifactId>get_jobs</artifactId>
+    <groupId>com.findjobs</groupId>
+    <artifactId>find_jobs</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>get_jobs</name>
+    <name>find_jobs</name>
 
     <!-- ===== 全局属性 ===== -->
     <properties>
@@ -226,7 +226,7 @@
                     <!-- 混淆密码 -->
                     <password>${project.artifactId}</password>
                     <!-- 不混淆的类 -->
-                    <excludes>com.getjobs.GetJobsApplication</excludes>
+                    <excludes>com.findjobs.findJobsApplication</excludes>
                     <!-- 打包后的 jar 文件 -->
                     <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
                     <!-- 输出加密后的 jar（带 -encrypted 后缀） -->
@@ -247,11 +247,11 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <target>
+                            <tasks>
                                 <move file="${project.build.directory}/${project.build.finalName}-encrypted.jar"
                                       tofile="${project.build.directory}/${project.build.finalName}.jar"
                                       overwrite="true"/>
-                            </target>
+                            </tasks>
                         </configuration>
                     </execution>
                 </executions>

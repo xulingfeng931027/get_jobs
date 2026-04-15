@@ -40,27 +40,4 @@ public class PlaywrightController {
         return ResponseEntity.ok(status);
     }
 
-    /**
-     * 测试Boss导航功能
-     */
-    @GetMapping("/test-navigate")
-    public ResponseEntity<Map<String, String>> testNavigate() {
-        try {
-            playwrightManager.getBossPage().navigate("https://www.zhipin.com");
-            String title = playwrightManager.getBossPage().title();
-
-            Map<String, String> result = new HashMap<>();
-            result.put("success", "true");
-            result.put("title", title);
-            result.put("url", playwrightManager.getBossPage().url());
-
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("测试Boss导航功能失败: {}", e.getMessage(), e);
-            Map<String, String> error = new HashMap<>();
-            error.put("success", "false");
-            error.put("error", e.getMessage());
-            return ResponseEntity.internalServerError().body(error);
-        }
-    }
 }

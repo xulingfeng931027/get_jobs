@@ -52,9 +52,10 @@ export default function CommonOptionSelector({
 
   // 获取公共选项列表
   const fetchOptions = async () => {
+    let response: Response | undefined
     try {
       setLoading(true)
-      const response = await authFetch(`${API_PATHS.commonOption}?type=${type}`)
+      response = await authFetch(`${API_PATHS.commonOption}?type=${type}`)
       if (response.ok) {
         const data = await response.json()
         // 按 sortOrder 排序

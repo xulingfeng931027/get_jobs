@@ -264,9 +264,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
     params.set("page", String(toPage))
     params.set("size", String(toSize))
 
+    let res: Response | undefined
     try {
       setLoadingList(true)
-      const res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
+      res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
       const data: PagedResult = await res.json()
       setItems(data.items || [])
       setTotal(data.total || 0)
@@ -299,9 +300,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
     if (maxK) params.set("maxK", String(Number(maxK)))
     if (keyword) params.set("keyword", keyword)
 
+    let res: Response | undefined
     try {
       setLoadingStats(true)
-      const res = await authFetch(`${API_PATHS.liepin.stats}?${params.toString()}`)
+      res = await authFetch(`${API_PATHS.liepin.stats}?${params.toString()}`)
       const data: StatsResponse = await res.json()
       setStats(data)
     } catch (e) {
@@ -324,6 +326,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   useEffect(() => { loadList(1, size) }, [])
 
   const exportCSV = async () => {
+    let res: Response | undefined
     try {
       setExporting(true)
       const baseParams = new URLSearchParams()
@@ -344,7 +347,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
+        res = await authFetch(`${API_PATHS.liepin.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length

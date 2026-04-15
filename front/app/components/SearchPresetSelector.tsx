@@ -65,9 +65,10 @@ export default function SearchPresetSelector({
 
   // 获取预设列表
   const fetchPresets = async () => {
+    let response: Response | undefined
     try {
       setLoading(true)
-      const response = await authFetch(API_PATHS.searchPreset)
+      response = await authFetch(API_PATHS.searchPreset)
       if (response.ok) {
         const data = await response.json()
         setPresets(data || [])
@@ -94,8 +95,9 @@ export default function SearchPresetSelector({
   // 删除预设
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation() // 阻止事件冒泡，避免触发选择
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.searchPresetById(id), {
+      response = await authFetch(API_PATHS.searchPresetById(id), {
         method: 'DELETE',
       })
       if (response.ok) {
@@ -126,8 +128,9 @@ export default function SearchPresetSelector({
   const handleSave = async () => {
     if (!saveName.trim()) return
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.searchPreset, {
+      response = await authFetch(API_PATHS.searchPreset, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

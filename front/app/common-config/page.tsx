@@ -43,9 +43,10 @@ export default function CommonConfigPage() {
 
   // 获取所有选项
   const fetchOptions = async () => {
+    let response: Response | undefined
     try {
       setLoading(true)
-      const response = await authFetch(API_PATHS.commonOption)
+      response = await authFetch(API_PATHS.commonOption)
       if (response.ok) {
         const result = await response.json()
         // 兼容不同的 API 响应格式
@@ -98,8 +99,9 @@ export default function CommonConfigPage() {
       return
     }
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.commonOption, {
+      response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,8 +164,9 @@ export default function CommonConfigPage() {
       return
     }
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.commonOption, {
+      response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,8 +204,9 @@ export default function CommonConfigPage() {
 
   // 删除选项
   const handleDelete = async (id: number) => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.commonOptionById(id), {
+      response = await authFetch(API_PATHS.commonOptionById(id), {
         method: 'DELETE',
       })
 
@@ -261,8 +265,9 @@ export default function CommonConfigPage() {
       return
     }
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.commonOptionById(option.id), {
+      response = await authFetch(API_PATHS.commonOptionById(option.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -335,8 +340,9 @@ export default function CommonConfigPage() {
       return
     }
 
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.commonOption, {
+      response = await authFetch(API_PATHS.commonOption, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

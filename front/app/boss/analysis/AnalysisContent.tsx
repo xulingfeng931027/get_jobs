@@ -403,6 +403,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   }
 
   const exportCSV = async () => {
+    let res: Response | undefined
     try {
       setExporting(true)
       // 组装当前筛选条件
@@ -426,7 +427,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await authFetch(`${API_PATHS.boss.list}?${params.toString()}`)
+        res = await authFetch(`${API_PATHS.boss.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         let chunk = data.items || []
         // 导出也做兜底过滤，确保CSV不含猎头岗位

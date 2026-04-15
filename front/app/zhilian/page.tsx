@@ -159,9 +159,10 @@ export default function ZhilianPage() {
   }, [])
 
   const handleStartDelivery = async () => {
+    let response: Response | undefined
     try {
       setIsDelivering(true)
-      const response = await authFetch(API_PATHS.zhilian.start, { method: 'POST' })
+      response = await authFetch(API_PATHS.zhilian.start, { method: 'POST' })
       const data = await response.json()
       if (!data.success) setIsDelivering(false)
     } catch (error) {
@@ -179,8 +180,9 @@ export default function ZhilianPage() {
   }
 
   const handleStopDelivery = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.zhilian.stop, { method: 'POST' })
+      response = await authFetch(API_PATHS.zhilian.stop, { method: 'POST' })
       const data = await response.json()
       if (data.success) setIsDelivering(false)
     } catch (error) {
@@ -198,8 +200,9 @@ export default function ZhilianPage() {
   }
 
   const triggerLogout = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.zhilian.logout, { method: 'POST' })
+      response = await authFetch(API_PATHS.zhilian.logout, { method: 'POST' })
       const data = await response.json()
       setIsLoggedIn(false)
       setLogoutResult({ success: data.success, message: data.success ? '已退出登录，Cookie已清空。' : data.message })
@@ -220,8 +223,9 @@ export default function ZhilianPage() {
   }
 
   const handleSaveCookie = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' })
+      response = await authFetch(API_PATHS.cookieSave('zhilian'), { method: 'POST' })
       const data = await response.json()
       setSaveResult({ success: data.success, message: data.success ? '配置保存成功。' : data.message })
       setShowSaveDialog(true)
@@ -241,9 +245,10 @@ export default function ZhilianPage() {
   }
 
   const handleSaveConfig = async () => {
+    let response: Response | undefined
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await authFetch(API_PATHS.zhilian.config, {
+      response = await authFetch(API_PATHS.zhilian.config, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

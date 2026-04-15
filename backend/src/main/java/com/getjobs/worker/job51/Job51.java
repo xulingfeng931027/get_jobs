@@ -45,10 +45,14 @@ public class Job51 {
     private Page page;
     @Setter
     private Job51Config config;
-    @Setter
     private ProgressCallback progressCallback;
     @Setter
     private Supplier<Boolean> shouldStopCallback;
+
+    // 手写 setter，避免 JRebel 对 Lombok @Setter 生成的 lambda 类型转换出错
+    public void setProgressCallback(ProgressCallback progressCallback) {
+        this.progressCallback = progressCallback;
+    }
     private boolean networkHooked = false;
     private boolean reachedDailyLimit = false;
     @Getter

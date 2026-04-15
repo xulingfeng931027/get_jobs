@@ -277,9 +277,10 @@ export default function Job51Page() {
   }, [])
 
   const handleStartDelivery = async () => {
+    let response: Response | undefined
     try {
       setIsDelivering(true)
-      const response = await authFetch(API_PATHS.job51.start, { method: 'POST' })
+      response = await authFetch(API_PATHS.job51.start, { method: 'POST' })
       const data = await response.json()
       if (!data.success) {
         console.warn('[51job] 启动失败：', data.message)
@@ -302,8 +303,9 @@ export default function Job51Page() {
   }
 
   const handleStopDelivery = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.job51.stop, { method: 'POST' })
+      response = await authFetch(API_PATHS.job51.stop, { method: 'POST' })
       if (!response.ok) {
         // 后端返回错误状态码，恢复按钮
         console.warn('[51job] 停止投递请求失败，状态码:', response.status)
@@ -341,8 +343,9 @@ export default function Job51Page() {
   }
 
   const triggerLogout = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.job51.logout, { method: 'POST' })
+      response = await authFetch(API_PATHS.job51.logout, { method: 'POST' })
       const data = await response.json()
       setIsLoggedIn(false)
       setLogoutResult({ success: data.success, message: data.success ? '已退出登录，Cookie已清空。' : data.message })
@@ -363,8 +366,9 @@ export default function Job51Page() {
   }
 
   const handleSaveCookie = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
+      response = await authFetch(API_PATHS.cookieSave('51job'), { method: 'POST' })
       const data = await response.json()
       setSaveResult({ success: data.success, message: data.success ? '配置保存成功。' : data.message })
       setShowSaveDialog(true)
@@ -384,8 +388,9 @@ export default function Job51Page() {
   }
 
   const handleSaveConfig = async () => {
+    let response: Response | undefined
     try {
-      // 将 jobArea / salary 统一为“中文名”的括号列表字符串，满足后端保存中文的要求
+      // 将 jobArea / salary 统一为”中文名”的括号列表字符串，满足后端保存中文的要求
       const toBracketListString = (v?: string, type?: 'jobArea' | 'salary') => {
         const t = (v || '').trim()
         if (!t) return '[]'
@@ -393,7 +398,7 @@ export default function Job51Page() {
           // 城市允许手动输入，若下拉匹配不到则直接保存输入值
           const match = (options.jobArea || []).find((o) => o.code === t || o.name === t)
           const name = match?.name || t
-          return `["${name.replace(/"/g, '\\"')}"]`
+          return `[“${name.replace(/”/g, '\\”')}”]`
         }
         if (type === 'salary') {
           // 薪资多选：将selectedSalaries数组映射为中文名数组
@@ -405,7 +410,7 @@ export default function Job51Page() {
             .filter(Boolean)
           return names.length > 0 ? JSON.stringify(names) : '[]'
         }
-        return `["${t.replace(/"/g, '\\"')}"]"`
+        return `[“${t.replace(/”/g, '\\”')}”]”`
       }
       const payload = {
         ...config,
@@ -413,7 +418,7 @@ export default function Job51Page() {
         jobArea: toBracketListString(config.jobArea, 'jobArea'),
         salary: toBracketListString(config.salary, 'salary'),
       }
-      const response = await authFetch(API_PATHS.job51.config, {
+      response = await authFetch(API_PATHS.job51.config, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

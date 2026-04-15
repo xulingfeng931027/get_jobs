@@ -132,7 +132,8 @@ export default function AnalysisContent({ showHeader = false }:{ showHeader?: bo
     if (keyword) params.set("keyword", keyword)
     params.set("page", String(toPage))
     params.set("size", String(toSize))
-    try{ setLoadingList(true); const res = await authFetch(`${API_PATHS.job51.list}?${params.toString()}`); const data:PagedResult51 = await res.json(); setItems(data.items||[]); setTotal(data.total||0); setPage(data.page||toPage); setSize(data.size||toSize) }catch(e){ console.error("fetch list failed",e); let msg = '加载失败，请稍后重试'; if (res && !res.ok) { try { const errData = await res.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setLoadingList(false) }
+    let res: Response | undefined
+    try{ setLoadingList(true); res = await authFetch(`${API_PATHS.job51.list}?${params.toString()}`); const data:PagedResult51 = await res.json(); setItems(data.items||[]); setTotal(data.total||0); setPage(data.page||toPage); setSize(data.size||toSize) }catch(e){ console.error("fetch list failed",e); let msg = '加载失败，请稍后重试'; if (res && !res.ok) { try { const errData = await res.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setLoadingList(false) }
   }
 
   const loadStats = async ()=>{
@@ -144,13 +145,15 @@ export default function AnalysisContent({ showHeader = false }:{ showHeader?: bo
     if (minK) params.set("minK", String(Number(minK)))
     if (maxK) params.set("maxK", String(Number(maxK)))
     if (keyword) params.set("keyword", keyword)
-    try{ setLoadingStats(true); const res = await authFetch(`${API_PATHS.job51.stats}?${params.toString()}`); const data:StatsResponse = await res.json(); setStats(data) }catch(e){ console.error("fetch stats failed",e); let msg = '加载失败，请稍后重试'; if (res && !res.ok) { try { const errData = await res.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setLoadingStats(false) }
+    let res2: Response | undefined
+    try{ setLoadingStats(true); res2 = await authFetch(`${API_PATHS.job51.stats}?${params.toString()}`); const data:StatsResponse = await res2.json(); setStats(data) }catch(e){ console.error("fetch stats failed",e); let msg = '加载失败，请稍后重试'; if (res2 && !res2.ok) { try { const errData = await res2.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setLoadingStats(false) }
   }
 
   useEffect(()=>{ loadList(1,size) },[])
 
   const onReload = async ()=>{
-    try{ setReloading(true); const res=await authFetch(`${API_PATHS.job51.reload}`); const data=await res.json(); console.log("reload",data); await loadList(1,size); await loadStats() }catch(e){ console.error("reload failed",e); let msg = '刷新失败，请稍后重试'; if (res && !res.ok) { try { const errData = await res.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setReloading(false) }
+    let res: Response | undefined
+    try{ setReloading(true); res=await authFetch(`${API_PATHS.job51.reload}`); const data=await res.json(); console.log("reload",data); await loadList(1,size); await loadStats() }catch(e){ console.error("reload failed",e); let msg = '刷新失败，请稍后重试'; if (res && !res.ok) { try { const errData = await res.clone().json(); msg = errData.message || msg } catch {} } else if (e instanceof Error) { msg = e.message } showToast(msg, 'error') } finally { setReloading(false) }
   }
 
   const exportCSV = async ()=>{

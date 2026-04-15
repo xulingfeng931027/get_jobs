@@ -64,8 +64,9 @@ export function useDelivery(options: UseDeliveryOptions) {
       }
     } else {
       // 后端 API 模式（兼容当前架构）
+      let response: Response | undefined
       try {
-        const response = await authFetch(API_PATHS[platform].start, {
+        response = await authFetch(API_PATHS[platform].start, {
           method: 'POST',
         })
         const data = await response.json()
@@ -119,8 +120,9 @@ export function useDelivery(options: UseDeliveryOptions) {
       }
     } else {
       // 后端 API 模式（兼容当前架构）
+      let response: Response | undefined
       try {
-        const response = await authFetch(API_PATHS[platform].stop, {
+        response = await authFetch(API_PATHS[platform].stop, {
           method: 'POST',
         })
         const data = await response.json()

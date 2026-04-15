@@ -167,9 +167,10 @@ export default function LiepinPage() {
   }
 
   const handleSave = async () => {
+    let response: Response | undefined
     try {
       const payload = { ...config, keywords: serializeKeywordsForDb(config.keywords) }
-      const response = await authFetch(API_PATHS.liepin.config, {
+      response = await authFetch(API_PATHS.liepin.config, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -210,9 +211,10 @@ export default function LiepinPage() {
   }
 
   const handleStartDelivery = async () => {
+    let response: Response | undefined
     try {
       setIsDelivering(true)
-      const response = await authFetch(API_PATHS.liepin.start, {
+      response = await authFetch(API_PATHS.liepin.start, {
         method: 'POST'
       })
       const data = await response.json()
@@ -241,8 +243,9 @@ export default function LiepinPage() {
   }
 
   const handleStopDelivery = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.liepin.stop, {
+      response = await authFetch(API_PATHS.liepin.stop, {
         method: 'POST'
       })
       const data = await response.json()
@@ -270,8 +273,9 @@ export default function LiepinPage() {
   }
 
   const triggerLogout = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.liepin.logout, { method: 'POST' })
+      response = await authFetch(API_PATHS.liepin.logout, { method: 'POST' })
       const data = await response.json()
       if (data.success) {
         setIsLoggedIn(false)

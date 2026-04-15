@@ -75,8 +75,9 @@ export default function AiConfigPage() {
 
   // 加载 API 配置
   const fetchApiConfig = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.config, {
+      response = await authFetch(API_PATHS.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -114,8 +115,9 @@ export default function AiConfigPage() {
 
   // 加载 boss_config 的 enable_ai 字段
   const fetchEnableAi = async () => {
+    let response: Response | undefined
     try {
-      const response = await authFetch(API_PATHS.boss.config, {
+      response = await authFetch(API_PATHS.boss.config, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

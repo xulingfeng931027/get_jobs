@@ -250,6 +250,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   const statusOptions = ["未投递", "已投递", "已过滤", "投递失败"]
 
   const loadList = async (toPage = page, toSize = size) => {
+    let res: Response | undefined
     try {
       const params = new URLSearchParams()
       if (statuses.length) params.set("statuses", statuses.join(","))
@@ -261,7 +262,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       if (keyword) params.set("keyword", keyword)
       params.set("page", String(toPage))
       params.set("size", String(toSize))
-      const res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
+      res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
       const data: PagedResult = await res.json()
       setItems(data.items || [])
       setTotal(data.total || 0)
@@ -283,6 +284,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   }
 
   const loadStats = async () => {
+    let res: Response | undefined
     try {
       setLoadingStats(true)
       const params = new URLSearchParams()
@@ -293,7 +295,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
       if (minK) params.set("minK", String(Number(minK)))
       if (maxK) params.set("maxK", String(Number(maxK)))
       if (keyword) params.set("keyword", keyword)
-      const res = await authFetch(`${API_PATHS.zhilian.stats}?${params.toString()}`)
+      res = await authFetch(`${API_PATHS.zhilian.stats}?${params.toString()}`)
       const data: StatsResponse = await res.json()
       setStats(data)
     } catch (e) {
@@ -324,6 +326,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
   }, [statuses.join(","), location, experience, degree, minK, maxK, keyword])
 
   const exportCSV = async () => {
+    let res: Response | undefined
     try {
       setExporting(true)
       const baseParams = new URLSearchParams()
@@ -344,7 +347,7 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
         const params = new URLSearchParams(baseParams)
         params.set("page", String(currentPage))
         params.set("size", String(pageSize))
-        const res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
+        res = await authFetch(`${API_PATHS.zhilian.list}?${params.toString()}`)
         const data: PagedResult = await res.json()
         const chunk = data.items || []
         if (currentPage === 1) totalCount = data.total || chunk.length

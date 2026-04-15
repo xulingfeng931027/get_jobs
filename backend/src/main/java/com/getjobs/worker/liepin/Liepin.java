@@ -9,6 +9,7 @@ import com.getjobs.worker.utils.Bot;
 import com.getjobs.worker.utils.PlaywrightUtil;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import lombok.Getter;
@@ -227,13 +228,49 @@ public class Liepin {
         }
     }
 
+    /**
+     * 带重试的 waitForSelector，处理 Playwright 并发导航导致的 Object doesn't exist 异常
+     */
+    private boolean waitForSelectorWithRetry(String selector, int timeoutMs, int maxRetries) {
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                page.waitForSelector(selector, new Page.WaitForSelectorOptions().setTimeout(timeoutMs));
+                return true;
+            } catch (PlaywrightException e) {
+                if (e.getMessage() != null && e.getMessage().contains("Object doesn't exist")) {
+                    log.warn("waitForSelector 对象引用失效（第{}次重试）: {}", attempt + 1, selector);
+                    if (attempt < maxRetries) {
+                        try { Thread.sleep(1000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                        // 重新导航后继续重试
+                        try {
+                            page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED);
+                        } catch (Exception ignored) {}
+                        continue;
+                    }
+                }
+                log.warn("waitForSelector 失败: {} - {}", selector, e.getMessage());
+                return false;
+            }
+        }
+        return false;
+    }
+
     private void submit(String keyword) {
         // 清洗关键词：去掉前后引号与多余空白
         String cleanKeyword = keyword == null ? "" : keyword.replace("\"", "").trim();
-        page.navigate(getSearchUrl() + "&key=" + cleanKeyword);
+        try {
+            page.navigate(getSearchUrl() + "&key=" + cleanKeyword);
+        } catch (Exception e) {
+            log.error("猎聘搜索页导航失败: {}", e.getMessage());
+            return;
+        }
 
-        // 等待分页元素加载
-        page.waitForSelector(PAGINATION_BOX, new Page.WaitForSelectorOptions().setTimeout(10000));
+        // 等待分页元素加载（带重试，处理 Playwright 并发导致的对象引用失效）
+        boolean pageReady = waitForSelectorWithRetry(PAGINATION_BOX, 10000, 2);
+        if (!pageReady) {
+            log.warn("猎聘搜索结果页未加载完成，跳过关键词: {}", cleanKeyword);
+            return;
+        }
         Locator paginationBox = page.locator(PAGINATION_BOX);
         Locator lis = paginationBox.locator("li");
         setMaxPage(lis);
@@ -250,15 +287,11 @@ public class Liepin {
                     closeBtn.click();
                 }
             } catch (Exception ignored) {
+                log.error(ignored.getMessage(), ignored);
             }
 
         // 等待岗位卡片挂载（不要求可见，避免因遮挡造成超时）
-        page.waitForSelector(
-            JOB_CARDS,
-            new Page.WaitForSelectorOptions()
-                .setState(WaitForSelectorState.ATTACHED)
-                .setTimeout(15000)
-        );
+            waitForSelectorWithRetry(JOB_CARDS, 15000, 2);
             // 额外等待一次接口响应，确保 lastApiEntities 刷新（精确匹配PC搜索接口）
             try {
                 page.waitForResponse(r -> {
