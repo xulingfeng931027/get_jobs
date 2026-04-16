@@ -234,29 +234,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven Antrun Plugin：重命名加密 jar，为 repackage 做准备 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>rename-encrypted-jar</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <tasks>
-                                <move file="${project.build.directory}/${project.build.finalName}-encrypted.jar"
-                                      tofile="${project.build.directory}/${project.build.finalName}.jar"
-                                      overwrite="true"/>
-                            </tasks>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <!-- Spring Boot Maven Plugin：打包可执行 Jar + 生成 build-info -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>

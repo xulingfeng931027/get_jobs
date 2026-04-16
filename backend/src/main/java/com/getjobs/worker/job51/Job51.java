@@ -338,13 +338,13 @@ public class Job51 {
                     return;
                 }
 
-                // 查找批量投递按钮
-                Locator parent = page.locator("div.tabs_in");
-                Locator buttons = parent.locator("button.p_but");
+                // 查找"一键投递"按钮（class 包含 p_but 和 all_apply）
+                Locator button = page.locator("button.p_but.all_apply");
 
-                if (buttons.count() > 1) {
+                if (button.count() > 0) {
                     PlaywrightUtil.sleep(1);
-                    buttons.nth(1).click();
+                    // 使用 JS 点击避免遮挡
+                    button.first().evaluate("el => el.click()");
 
                     // 🚨 点击后立即检测“日投递上限”提示（短暂出现，需快速多次检测）
                     for (int i = 0; i < 10; i++) {
@@ -359,6 +359,7 @@ public class Job51 {
 
                     success = true;
                 } else {
+                    log.warn("[51job] 未找到一键投递按钮 button.p_but.all_apply");
                     break;
                 }
             } catch (Exception e) {
