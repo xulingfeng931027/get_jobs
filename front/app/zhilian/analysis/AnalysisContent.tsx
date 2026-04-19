@@ -600,10 +600,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>按 delivery_status 聚合</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
+            {stats?.charts?.byStatus?.length ? (
               <ChartCanvas type="pie" labels={stats.charts.byStatus.map((x) => x.name)} data={stats.charts.byStatus.map((x) => x.value)} colors={CATEGORY_COLORS} />
             ) : (
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
             )}
           </CardContent>
         </Card>
@@ -614,10 +614,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>按地区聚合</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
+            {stats?.charts?.byCity?.length ? (
               <ChartCanvas type="bar" labels={stats.charts.byCity.map((x) => x.name)} data={stats.charts.byCity.map((x) => x.value)} color="#3b82f6" />
             ) : (
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
             )}
           </CardContent>
         </Card>
@@ -628,10 +628,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>按公司名称聚合</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
+            {stats?.charts?.byCompany?.length ? (
               <ChartCanvas type="bar" labels={stats.charts.byCompany.map((x) => x.name)} data={stats.charts.byCompany.map((x) => x.value)} color="#10b981" />
             ) : (
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
             )}
           </CardContent>
         </Card>
@@ -642,10 +642,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>不同经验要求的岗位数</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
+            {stats?.charts?.byExperience?.length ? (
               <ChartCanvas type="bar" labels={stats.charts.byExperience.map((x) => x.name)} data={stats.charts.byExperience.map((x) => x.value)} color="#f59e0b" />
             ) : (
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
             )}
           </CardContent>
         </Card>
@@ -656,10 +656,10 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>不同学历要求的岗位数</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
+            {stats?.charts?.byDegree?.length ? (
               <ChartCanvas type="bar" labels={stats.charts.byDegree.map((x) => x.name)} data={stats.charts.byDegree.map((x) => x.value)} color="#6366f1" />
             ) : (
-              <div className="text-muted-foreground">加载中...</div>
+              <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
             )}
           </CardContent>
         </Card>
@@ -670,11 +670,14 @@ export default function AnalysisContent({ showHeader = false }: { showHeader?: b
             <CardDescription>基于中位数K的桶聚合（后端或前端计算）</CardDescription>
           </CardHeader>
           <CardContent>
-            {stats ? (
-              <ChartCanvas type="line" labels={(computedSalaryBuckets.length ? computedSalaryBuckets : stats.charts.salaryBuckets).map((x) => (x as any).bucket)} data={(computedSalaryBuckets.length ? computedSalaryBuckets : stats.charts.salaryBuckets).map((x) => x.value)} color="#ef4444" />
-            ) : (
-              <div className="text-muted-foreground">加载中...</div>
-            )}
+            {(() => {
+              const buckets = computedSalaryBuckets.length ? computedSalaryBuckets : (stats?.charts?.salaryBuckets || [])
+              return buckets.length ? (
+                <ChartCanvas type="line" labels={buckets.map((x: any) => x.bucket)} data={buckets.map((x: any) => x.value)} color="#ef4444" />
+              ) : (
+                <div className="text-muted-foreground">{stats ? '暂无数据' : '加载中...'}</div>
+              )
+            })()}
           </CardContent>
         </Card>
       </div>
